@@ -1,31 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+  ActivityIndicator, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View,
 } from 'react-native'
-import { useNavigation, useRoute } from '@react-navigation/native'
+import { StackActions, useNavigation, useRoute } from '@react-navigation/native'
 import type { RouteProp } from '@react-navigation/native'
+import * as Haptics from 'expo-haptics'
+import PagerView from 'react-native-pager-view'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { fetchMatchBbb, fetchMatchScore } from '../lib/api'
+import { fetchLiveMatches, fetchMatchBbb, fetchMatchScore } from '../lib/api'
+import { fallOfWickets } from '../lib/partnerships'
 import { LiveBadge } from '../components/LiveBadge'
 import { LiveLinePanel } from '../components/LiveLinePanel'
+import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
+import { TeamAvatar } from '../components/TeamAvatar'
 import { HistoryPanel } from '../components/panels/HistoryPanel'
+import { PredictionPanel } from '../components/panels/PredictionPanel'
 import { RatesPanel } from '../components/panels/RatesPanel'
 import { SessionPanel } from '../components/panels/SessionPanel'
 import { SquadPanel } from '../components/panels/SquadPanel'
 import { TablePanel } from '../components/panels/TablePanel'
 import type { BbbBall } from '../types/extras'
-import type { RootStackParamList } from '../types/match'
+import type { Match, RootStackParamList } from '../types/match'
 import type { InningScorecard, ScorecardData } from '../types/scorecard'
 import { colors } from '../theme/colors'
 import { formatScore, formatSr } from '../theme/matchUtils'
 
 type Route = RouteProp<RootStackParamList, 'Scoreboard'>
-type Tab = 'line' | 'session' | 'rates' | 'scorecard' | 'history' | 'squad' | 'table' | 'info'
+type Tab = 'line' | 'session' | 'rates' | 'prediction' | 'scorecard' | 'history' | 'squad' | 'table' | 'info'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'line', label: 'Live Line' },
   { key: 'session', label: 'Session' },
   { key: 'rates', label: 'Rates' },
+  { key: 'prediction', label: 'Win %' },
   { key: 'scorecard', label: 'Scorecard' },
   { key: 'history', label: 'History' },
   { key: 'squad', label: 'Squad' },
@@ -35,12 +42,33 @@ const TABS: { key: Tab; label: string }[] = [
 
 const TAB_FADE_STEPS = [0.04, 0.12, 0.28, 0.5, 0.78, 0.95]
 
-function TabBar({ active, onChange }: { active: Tab; onChange: (k: Tab) => void }) {
+function TabBar({
+  active, onChange, scrollRef, onTabLayout,
+}: {
+  active: Tab
+  onChange: (k: Tab) => void
+  scrollRef: React.RefObject<ScrollView | null>
+  onTabLayout: (index: number, x: number, width: number) => void
+}) {
   return (
     <View style={styles.tabBarWrap}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={styles.tabBarContent}>
-        {TABS.map((t) => (
-          <Pressable key={t.key} onPress={() => onChange(t.key)} style={[styles.tabBtn, active === t.key && styles.tabBtnActive]}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabBar}
+        contentContainerStyle={styles.tabBarContent}
+      >
+        {TABS.map((t, i) => (
+          <Pressable
+            key={t.key}
+            onPress={() => onChange(t.key)}
+            onLayout={(e) => onTabLayout(i, e.nativeEvent.layout.x, e.nativeEvent.layout.width)}
+            style={[styles.tabBtn, active === t.key && styles.tabBtnActive]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active === t.key }}
+            accessibilityLabel={`${t.label} tab`}
+          >
             <Text style={[styles.tabText, active === t.key && styles.tabTextActive]}>{t.label}</Text>
           </Pressable>
         ))}
@@ -55,6 +83,7 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (k: Tab) => void 
 }
 
 function BattingTable({ inning }: { inning: InningScorecard }) {
+  const fow = fallOfWickets(inning)
   return (
     <View style={styles.table}>
       <View style={styles.tHead}>
@@ -78,6 +107,14 @@ function BattingTable({ inning }: { inning: InningScorecard }) {
           </View>
         )
       })}
+      {fow.length > 0 && (
+        <View style={styles.fowBox}>
+          <Text style={styles.fowLabel}>FALL OF WICKETS</Text>
+          {fow.map((w) => (
+            <Text key={w.n} style={styles.fowLine}>{w.n}. {w.score} — {w.player} ({w.dismissal})</Text>
+          ))}
+        </View>
+      )}
       {inning.extras && (
         <View style={styles.extrasRow}>
           <Text style={styles.extrasText}>Extras {inning.extras.t} (b {inning.extras.b ?? 0}, lb {inning.extras.lb ?? 0}, w {inning.extras.w ?? 0}, nb {inning.extras.nb ?? 0})</Text>
@@ -121,11 +158,13 @@ function ScoreHero({ data }: { data: ScorecardData }) {
   return (
     <View style={styles.hero}>
       <View style={styles.heroTeam}>
+        <TeamAvatar shortname={data.teamInfo?.[0]?.shortname ?? t0} logo={data.teamInfo?.[0]?.img} size={36} />
         <Text style={styles.heroTeamName}>{data.teamInfo?.[0]?.shortname ?? t0}</Text>
         <Text style={styles.heroScore}>{s0 ? formatScore(s0) : '—'}</Text>
       </View>
       <Text style={styles.heroVs}>v</Text>
       <View style={[styles.heroTeam, { alignItems: 'flex-end' }]}>
+        <TeamAvatar shortname={data.teamInfo?.[1]?.shortname ?? t1} logo={data.teamInfo?.[1]?.img} size={36} />
         <Text style={styles.heroTeamName}>{data.teamInfo?.[1]?.shortname ?? t1}</Text>
         <Text style={styles.heroScore}>{s1 ? formatScore(s1) : '—'}</Text>
       </View>
@@ -135,32 +174,41 @@ function ScoreHero({ data }: { data: ScorecardData }) {
 
 export function ScoreboardScreen() {
   const navigation = useNavigation()
-  const { matchId, matchName, seriesId, matchType } = useRoute<Route>().params
+  const route = useRoute<Route>()
+  const { matchId, seriesId, matchType } = route.params
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<ScorecardData | null>(null)
   const [bbb, setBbb] = useState<BbbBall[]>([])
+  const [otherLive, setOtherLive] = useState<Match[]>([])
   const [tab, setTab] = useState<Tab>('line')
   const [inningIdx, setInningIdx] = useState(0)
-  const lastFetch = useRef(Date.now())
-  const [updatedAgo, setUpdatedAgo] = useState(0)
+  const pagerRef = useRef<PagerView>(null)
+  const tabScrollRef = useRef<ScrollView>(null)
+  const tabLayouts = useRef<Record<number, { x: number; width: number }>>({})
+  const lastHapticPage = useRef(0)
 
-  const load = useCallback(async (opts?: { silent?: boolean }) => {
+  const headerTitle = data
+    ? `${data.teamInfo?.[0]?.shortname ?? data.teams[0]} vs ${data.teamInfo?.[1]?.shortname ?? data.teams[1]}`
+    : route.params.matchName
+
+  const load = useCallback(async (opts?: { silent?: boolean; pull?: boolean }) => {
     const silent = opts?.silent ?? false
-    if (silent) setRefreshing(true)
-    else setLoading(true)
+    const pull = opts?.pull ?? false
+    if (pull) setRefreshing(true)
+    else if (!silent) setLoading(true)
     setError(null)
     try {
-      const [scoreRes, bbbRes] = await Promise.all([
+      const [scoreRes, bbbRes, liveRes] = await Promise.all([
         fetchMatchScore(matchId),
         fetchMatchBbb(matchId).catch(() => ({ success: true, data: [] as BbbBall[] })),
+        fetchLiveMatches().catch(() => ({ success: true, data: [] as Match[] })),
       ])
       if (!scoreRes.success) throw new Error(scoreRes.error ?? 'API error')
       setData(scoreRes.data)
       if (bbbRes.success && Array.isArray(bbbRes.data)) setBbb(bbbRes.data)
-      lastFetch.current = Date.now()
-      setUpdatedAgo(0)
+      if (liveRes.success) setOtherLive(liveRes.data.filter((m) => m.id !== matchId && m.matchStarted && !m.matchEnded))
     } catch (e: any) {
       setError(e.message ?? 'Failed to load scorecard')
     } finally {
@@ -172,74 +220,158 @@ export function ScoreboardScreen() {
   useEffect(() => {
     load({ silent: false })
     const poll = setInterval(() => load({ silent: true }), 12_000)
-    const clock = setInterval(() => setUpdatedAgo(Math.floor((Date.now() - lastFetch.current) / 1000)), 1000)
-    return () => { clearInterval(poll); clearInterval(clock) }
-  }, [matchId])
+    return () => clearInterval(poll)
+  }, [load])
+
+  const scrollTabIntoView = useCallback((index: number) => {
+    const layout = tabLayouts.current[index]
+    if (!layout || !tabScrollRef.current) return
+    tabScrollRef.current.scrollTo({ x: Math.max(0, layout.x - 24), animated: true })
+  }, [])
+
+  const onTabChange = (k: Tab) => {
+    const idx = TABS.findIndex((t) => t.key === k)
+    if (idx < 0) return
+    setTab(k)
+    pagerRef.current?.setPage(idx)
+    scrollTabIntoView(idx)
+    void Haptics.selectionAsync()
+  }
+
+  const onPageSelected = (index: number) => {
+    setTab(TABS[index]?.key ?? 'line')
+    scrollTabIntoView(index)
+    if (lastHapticPage.current !== index) {
+      lastHapticPage.current = index
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    }
+  }
+
+  const onTabLayout = useCallback((index: number, x: number, width: number) => {
+    tabLayouts.current[index] = { x, width }
+  }, [])
+
+  useEffect(() => {
+    const idx = TABS.findIndex((t) => t.key === tab)
+    if (idx >= 0) scrollTabIntoView(idx)
+  }, [tab, scrollTabIntoView])
+
+  const shareScore = async () => {
+    if (!data) return
+    const line = data.score?.map((s) => `${s.inning}: ${s.r}/${s.w}`).join(' · ') ?? data.status
+    await Share.share({ message: `🏏 ${data.teams.join(' vs ')}\n${line}\n${data.status}\n· CricketFast` })
+  }
+
+  const switchMatch = (m: Match) => {
+    navigation.dispatch(StackActions.replace('Scoreboard', {
+      matchId: m.id,
+      matchName: m.teams.join(' vs '),
+      seriesId: m.series_id,
+      matchType: m.matchType,
+    }))
+  }
 
   const innings = data?.scorecard ?? []
   const activeInning = innings[inningIdx]
+
+  const renderPage = (key: Tab) => {
+    if (!data) return null
+    switch (key) {
+      case 'line': return <LiveLinePanel data={data} bbb={bbb} otherLive={otherLive} onSwitchMatch={switchMatch} />
+      case 'session': return <SessionPanel data={data} bbb={bbb} />
+      case 'rates': return <RatesPanel data={data} />
+      case 'prediction': return <PredictionPanel data={data} />
+      case 'history': return <HistoryPanel matchId={matchId} />
+      case 'squad': return <SquadPanel matchId={matchId} />
+      case 'table': return <TablePanel seriesId={seriesId} />
+      case 'info': return (
+        <View style={styles.infoCard}>
+          <InfoRow label="Venue" value={data.venue} />
+          <InfoRow label="Date" value={data.date} />
+          {data.tossWinner && <InfoRow label="Toss" value={`${data.tossWinner} chose to ${data.tossChoice}`} />}
+          <InfoRow label="Format" value={data.matchType?.toUpperCase() ?? '—'} />
+          <InfoRow label="Status" value={data.status} />
+        </View>
+      )
+      case 'scorecard': return innings.length ? (
+        <>
+          {innings.length > 1 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+              {innings.map((inn, i) => (
+                <Pressable key={i} onPress={() => setInningIdx(i)} style={[styles.inningTab, inningIdx === i && styles.inningTabActive]}>
+                  <Text style={[styles.inningTabText, inningIdx === i && styles.inningTabTextActive]}>{inn.inning}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+          {activeInning && <><BattingTable inning={activeInning} /><BowlingTable inning={activeInning} /></>}
+        </>
+      ) : <Text style={styles.noData}>Scorecard not available yet</Text>
+      default: return null
+    }
+  }
 
   return (
     <View style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safeTop}>
         <View style={styles.nav}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}><Text style={styles.backText}>← Back</Text></Pressable>
+          <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button">
+            <Text style={styles.backText}>← Back</Text>
+          </Pressable>
           <View style={styles.navRight}>
+            {data && (
+              <Pressable onPress={shareScore} style={styles.shareBtn} accessibilityRole="button" accessibilityLabel="Share score">
+                <Text style={styles.shareText}>Share</Text>
+              </Pressable>
+            )}
             <View style={styles.fmtPill}><Text style={styles.fmtPillText}>{data?.matchType?.toUpperCase() ?? matchType?.toUpperCase() ?? 'MATCH'}</Text></View>
             <LiveBadge ended={data?.matchEnded} started={data?.matchStarted} />
           </View>
         </View>
-        <Text style={styles.matchTitle} numberOfLines={2}>{matchName}</Text>
+        <Text style={styles.matchTitle} numberOfLines={1}>{headerTitle}</Text>
       </SafeAreaView>
 
       {loading && !data ? (
-        <ActivityIndicator color={colors.accent} style={styles.loader} />
+        <View style={{ padding: 12 }}><MatchCardSkeleton /><ActivityIndicator color={colors.accent} style={{ marginTop: 16 }} /></View>
       ) : error && !data ? (
         <View style={styles.center}>
           <Text style={styles.error}>{error}</Text>
           <Pressable onPress={() => load({ silent: false })} style={styles.retryBtn}><Text style={styles.retryText}>Retry</Text></Pressable>
         </View>
       ) : data ? (
-        <ScrollView
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load({ silent: true })} tintColor={colors.accent} />}
-          stickyHeaderIndices={[2]}
-        >
+        <View style={styles.content}>
           <ScoreHero data={data} />
-          <TabBar active={tab} onChange={setTab} />
-          <View style={styles.body}>
-            {tab === 'line' && <LiveLinePanel data={data} updatedAgo={updatedAgo} bbb={bbb} />}
-            {tab === 'session' && <SessionPanel data={data} />}
-            {tab === 'rates' && <RatesPanel data={data} />}
-            {tab === 'history' && <HistoryPanel matchId={matchId} />}
-            {tab === 'squad' && <SquadPanel matchId={matchId} />}
-            {tab === 'table' && <TablePanel seriesId={seriesId} />}
-            {tab === 'info' && (
-              <View style={styles.infoCard}>
-                <InfoRow label="Venue" value={data.venue} />
-                <InfoRow label="Date" value={data.date} />
-                {data.tossWinner && <InfoRow label="Toss" value={`${data.tossWinner} chose to ${data.tossChoice}`} />}
-                <InfoRow label="Format" value={data.matchType?.toUpperCase() ?? '—'} />
-                <InfoRow label="Status" value={data.status} />
-              </View>
-            )}
-            {tab === 'scorecard' && (
-              innings.length ? (
-                <>
-                  {innings.length > 1 && (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
-                      {innings.map((inn, i) => (
-                        <Pressable key={i} onPress={() => setInningIdx(i)} style={[styles.inningTab, inningIdx === i && styles.inningTabActive]}>
-                          <Text style={[styles.inningTabText, inningIdx === i && styles.inningTabTextActive]}>{inn.inning}</Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
+          <TabBar active={tab} onChange={onTabChange} scrollRef={tabScrollRef} onTabLayout={onTabLayout} />
+          <PagerView
+            ref={pagerRef}
+            style={styles.pager}
+            initialPage={0}
+            scrollEnabled
+            overdrag
+            offscreenPageLimit={2}
+            onPageSelected={(e) => onPageSelected(e.nativeEvent.position)}
+          >
+            {TABS.map((t) => (
+              <View key={t.key} style={styles.page} collapsable={false}>
+                <ScrollView
+                  style={styles.pageScroll}
+                  contentContainerStyle={styles.body}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                  refreshControl={(
+                    <RefreshControl
+                      refreshing={refreshing}
+                      onRefresh={() => load({ pull: true })}
+                      tintColor={colors.accent}
+                    />
                   )}
-                  {activeInning && <><BattingTable inning={activeInning} /><BowlingTable inning={activeInning} /></>}
-                </>
-              ) : <Text style={styles.noData}>Scorecard not available yet</Text>
-            )}
-          </View>
-        </ScrollView>
+                >
+                  {renderPage(t.key)}
+                </ScrollView>
+              </View>
+            ))}
+          </PagerView>
+        </View>
       ) : null}
     </View>
   )
@@ -259,26 +391,32 @@ const styles = StyleSheet.create({
   safeTop: { backgroundColor: colors.header },
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 4 },
   navRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  shareBtn: { paddingHorizontal: 8, paddingVertical: 4 },
+  shareText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   fmtPill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
   fmtPillText: { color: '#fff', fontSize: 10, fontWeight: '800' },
-  backBtn: { paddingVertical: 4 },
+  backBtn: { paddingVertical: 4, minHeight: 44, justifyContent: 'center' },
   backText: { fontSize: 16, color: '#fff', fontWeight: '600' },
-  matchTitle: { fontSize: 15, fontWeight: '700', color: '#fff', paddingHorizontal: 16, paddingBottom: 12 },
+  matchTitle: { fontSize: 17, fontWeight: '800', color: '#fff', paddingHorizontal: 16, paddingBottom: 12 },
   hero: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  heroTeam: { flex: 1 },
+  heroTeam: { flex: 1, alignItems: 'flex-start', gap: 4 },
   heroTeamName: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
-  heroScore: { fontSize: 26, fontWeight: '900', color: colors.score, marginTop: 4 },
+  heroScore: { fontSize: 32, fontWeight: '900', color: colors.score },
   heroVs: { fontSize: 14, color: colors.textDim, fontWeight: '600', marginHorizontal: 12 },
   tabBarWrap: { position: 'relative', backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
   tabBar: { backgroundColor: colors.card },
   tabBarContent: { paddingRight: 28 },
   tabFade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 32, flexDirection: 'row' },
   tabFadeStep: { flex: 1 },
-  tabBtn: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: 'transparent' },
+  tabBtn: { paddingHorizontal: 14, paddingVertical: 14, minHeight: 44, borderBottomWidth: 3, borderBottomColor: 'transparent', justifyContent: 'center' },
   tabBtnActive: { borderBottomColor: colors.header },
   tabText: { fontSize: 12, fontWeight: '600', color: colors.textDim },
   tabTextActive: { color: colors.header, fontWeight: '800' },
-  body: { padding: 12, paddingBottom: 40 },
+  content: { flex: 1 },
+  pager: { flex: 1 },
+  page: { flex: 1 },
+  pageScroll: { flex: 1 },
+  body: { padding: 12, paddingBottom: 40, flexGrow: 1 },
   inningTab: { paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderRadius: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   inningTabActive: { backgroundColor: colors.header, borderColor: colors.header },
   inningTabText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
@@ -295,6 +433,9 @@ const styles = StyleSheet.create({
   strikerStat: { color: colors.score, fontWeight: '800' },
   dismissal: { fontSize: 11, color: colors.textDim, marginTop: 2 },
   td: { flex: 1, fontSize: 13, color: colors.text, textAlign: 'center' },
+  fowBox: { padding: 12, backgroundColor: colors.surfaceAlt, borderTopWidth: 1, borderTopColor: colors.border },
+  fowLabel: { fontSize: 10, fontWeight: '800', color: colors.textDim, marginBottom: 6 },
+  fowLine: { fontSize: 11, color: colors.textMuted, marginBottom: 4 },
   extrasRow: { padding: 12, backgroundColor: colors.surfaceAlt },
   extrasText: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
   totalsRow: { padding: 12, backgroundColor: colors.surfaceAlt },
@@ -304,7 +445,6 @@ const styles = StyleSheet.create({
   infoLabel: { width: 80, fontSize: 12, fontWeight: '700', color: colors.textMuted },
   infoValue: { flex: 1, fontSize: 13, color: colors.text },
   noData: { color: colors.textDim, textAlign: 'center', marginTop: 32 },
-  loader: { marginTop: 48 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   error: { color: colors.live, fontSize: 14, textAlign: 'center' },
   retryBtn: { marginTop: 16, backgroundColor: colors.header, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 6 },

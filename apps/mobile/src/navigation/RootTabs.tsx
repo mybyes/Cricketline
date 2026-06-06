@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { HomeScreen } from '../screens/HomeScreen'
 import { UpcomingScreen } from '../screens/UpcomingScreen'
 import { FavoritesScreen } from '../screens/FavoritesScreen'
@@ -12,11 +13,18 @@ import { colors } from '../theme/colors'
 const Tab = createBottomTabNavigator<RootTabParamList>()
 const Stack = createNativeStackNavigator<RootStackParamList>()
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = { Live: '⚡', Upcoming: '📅', Favorites: '★', Settings: '⚙' }
+const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Live: 'flash',
+  Upcoming: 'calendar',
+  Favorites: 'star',
+  Settings: 'settings-outline',
+}
+
+function TabIcon({ route, focused }: { route: string; focused: boolean }) {
+  const name = TAB_ICONS[route] ?? 'ellipse'
   return (
     <View style={styles.tabItem}>
-      <Text style={[styles.tabIcon, focused && styles.tabIconOn]}>{icons[label] ?? '•'}</Text>
+      <Ionicons name={name} size={22} color={focused ? colors.tabActive : colors.tabInactive} />
       {focused && <View style={styles.indicator} />}
     </View>
   )
@@ -40,7 +48,7 @@ export function RootTabs() {
         tabBarActiveTintColor: colors.tabActive,
         tabBarInactiveTintColor: colors.tabInactive,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
+        tabBarIcon: ({ focused }) => <TabIcon route={route.name} focused={focused} />,
       })}
     >
       <Tab.Screen name="Live" options={{ title: 'Live' }}>{() => <MatchStack listScreen={HomeScreen} />}</Tab.Screen>
@@ -54,8 +62,6 @@ export function RootTabs() {
 const styles = StyleSheet.create({
   tabBar: { backgroundColor: colors.card, borderTopColor: colors.border, borderTopWidth: 1, height: 58, paddingBottom: 6 },
   tabItem: { alignItems: 'center', paddingTop: 4 },
-  tabIcon: { fontSize: 18, opacity: 0.45 },
-  tabIconOn: { opacity: 1 },
   tabLabel: { fontSize: 10, fontWeight: '600' },
   indicator: { position: 'absolute', top: 0, width: 28, height: 3, backgroundColor: colors.header, borderRadius: 2 },
 })

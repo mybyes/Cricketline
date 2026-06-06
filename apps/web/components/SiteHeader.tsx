@@ -9,8 +9,8 @@ export function SiteHeader() {
           <Link href="/" className="brand-link">
             <span className="brand-icon">🏏</span>
             <div>
-              <h1>CricketFast Live Line</h1>
-              <p>Fastest live cricket scores &amp; scorecards</p>
+              <p className="brand-title">CricketFast Live Line</p>
+              <p className="brand-tagline">Fastest live cricket scores &amp; scorecards</p>
             </div>
           </Link>
         </div>

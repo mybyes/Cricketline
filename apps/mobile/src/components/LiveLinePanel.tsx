@@ -1,18 +1,22 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { BbbBall } from '../types/extras'
-import { buildOverSummaryLine } from '../lib/bbbUtils'
-import { ballColor } from '../lib/ballColors'
+import { currentPartnership } from '../lib/partnerships'
+import { ballColor, ballSummaryLabel } from '../lib/ballColors'
+import { buildOverSummaryLine, groupRecentOvers } from '../lib/bbbUtils'
+import type { Match } from '../types/match'
 import type { ScorecardData } from '../types/scorecard'
 import { colors } from '../theme/colors'
 import { formatScore, formatSr } from '../theme/matchUtils'
 import { liveRates } from '../lib/matchStats'
+import { OtherLiveMatches } from './OtherLiveMatches'
 
 export function LiveLinePanel({
-  data, updatedAgo, bbb = [],
+  data, bbb = [], otherLive = [], onSwitchMatch,
 }: {
   data: ScorecardData
-  updatedAgo?: number
   bbb?: BbbBall[]
+  otherLive?: Match[]
+  onSwitchMatch?: (m: Match) => void
 }) {
   const isLive = data.matchStarted && !data.matchEnded
   const activeInning = data.scorecard?.[data.scorecard.length - 1]
@@ -21,6 +25,25 @@ export function LiveLinePanel({
   const rates = liveRates(data)
   const lastBalls = [...bbb].slice(-6).reverse()
   const overText = buildOverSummaryLine(bbb)
+  const overGroups = groupRecentOvers(bbb, 30)
+  const partnership = activeInning ? currentPartnership(activeInning) : null
+
+  if (data.matchEnded) {
+    return (
+      <View>
+        <View style={styles.endedBox}>
+          <Text style={styles.endedLabel}>MATCH ENDED</Text>
+          <Text style={styles.endedStatus}>{data.status}</Text>
+        </View>
+        {data.score?.map((s, i) => (
+          <View key={i} style={styles.scoreRow}>
+            <Text style={styles.inningName}>{s.inning}</Text>
+            <Text style={styles.inningScore}>{formatScore(s)}</Text>
+          </View>
+        ))}
+      </View>
+    )
+  }
 
   return (
     <View>
@@ -31,13 +54,19 @@ export function LiveLinePanel({
           <View style={styles.rateRow}>
             {rates.crr != null && <Text style={styles.rateChip}>CRR {rates.crr.toFixed(2)}</Text>}
             {rates.rrr != null && <Text style={[styles.rateChip, styles.rrr]}>RRR {rates.rrr.toFixed(2)}</Text>}
+            {partnership && partnership.ended === 'batting' && (
+              <Text style={styles.rateChip}>P'ship {partnership.runs} ({partnership.balls})</Text>
+            )}
             {rates.target != null && <Text style={styles.rateChip}>TGT {rates.target}</Text>}
           </View>
         )}
-        {updatedAgo != null && (
-          <Text style={styles.updated}>Updated {updatedAgo < 5 ? 'just now' : `${updatedAgo}s ago`}</Text>
-        )}
       </View>
+
+      {isLive && bbb.length === 0 && (
+        <View style={styles.waitingBox}>
+          <Text style={styles.waitingText}>Waiting for ball-by-ball data…</Text>
+        </View>
+      )}
 
       {lastBalls.length > 0 && (
         <View style={styles.bbbBox}>
@@ -60,6 +89,30 @@ export function LiveLinePanel({
             <LegendDot color="#7b1fa2" label="6" />
             <LegendDot color="#e53935" label="W" />
           </View>
+        </View>
+      )}
+
+      {overGroups.length > 0 && (
+        <View style={styles.timelineBox}>
+          <Text style={styles.creaseLabel}>BALL BY BALL</Text>
+          <ScrollView style={styles.timelineScroll} nestedScrollEnabled>
+            {overGroups.map((g) => (
+              <View key={g.overNum} style={styles.overRow}>
+                <Text style={styles.overNum}>Ov {g.overNum}</Text>
+                <View style={styles.overBallsRow}>
+                  {g.balls.map((b, i) => {
+                    const c = ballColor(b)
+                    return (
+                      <View key={i} style={[styles.ballChipSm, { backgroundColor: c.bg }]}>
+                        <Text style={[styles.ballTextSm, { color: c.text }]}>{c.label}</Text>
+                      </View>
+                    )
+                  })}
+                </View>
+                <Text style={styles.overSummarySm}>{g.balls.map(ballSummaryLabel).join(' ')}</Text>
+              </View>
+            ))}
+          </ScrollView>
         </View>
       )}
 
@@ -89,6 +142,8 @@ export function LiveLinePanel({
         <Text style={styles.meta}>Toss: {data.tossWinner} chose to {data.tossChoice}</Text>
       )}
       <Text style={styles.meta}>{data.venue}</Text>
+
+      {onSwitchMatch && <OtherLiveMatches matches={otherLive} onSelect={onSwitchMatch} />}
     </View>
   )
 }
@@ -108,9 +163,13 @@ const styles = StyleSheet.create({
   lineLabel: { fontSize: 10, fontWeight: '900', color: colors.live, letterSpacing: 1, marginBottom: 6 },
   lineText: { fontSize: 15, fontWeight: '700', color: colors.lineStatus, lineHeight: 22 },
   rateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  rateChip: { fontSize: 11, fontWeight: '700', color: colors.text, backgroundColor: colors.card, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  rateChip: { fontSize: 13, fontWeight: '700', color: colors.text, backgroundColor: colors.card, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  endedBox: { backgroundColor: colors.surfaceAlt, padding: 16, borderRadius: 6, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
+  endedLabel: { fontSize: 10, fontWeight: '900', color: colors.textDim, letterSpacing: 1, marginBottom: 6 },
+  endedStatus: { fontSize: 16, fontWeight: '800', color: colors.score, lineHeight: 22 },
   rrr: { color: colors.score },
-  updated: { fontSize: 10, color: colors.textDim, marginTop: 6 },
+  waitingBox: { backgroundColor: colors.card, padding: 14, borderRadius: 6, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
+  waitingText: { fontSize: 12, color: colors.textDim, textAlign: 'center', fontStyle: 'italic' },
   bbbBox: { backgroundColor: colors.card, padding: 12, borderRadius: 6, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
   overSummary: { fontSize: 13, fontWeight: '700', color: colors.score, marginBottom: 10, letterSpacing: 0.3 },
   ballsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
@@ -120,6 +179,14 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendLabel: { fontSize: 10, color: colors.textDim, fontWeight: '600' },
+  timelineBox: { backgroundColor: colors.card, padding: 12, borderRadius: 6, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
+  timelineScroll: { maxHeight: 220 },
+  overRow: { marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  overNum: { fontSize: 11, fontWeight: '800', color: colors.textDim, marginBottom: 6 },
+  overBallsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 4 },
+  ballChipSm: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  ballTextSm: { fontSize: 10, fontWeight: '900' },
+  overSummarySm: { fontSize: 11, color: colors.textMuted, letterSpacing: 0.3 },
   creaseLabel: { fontSize: 10, fontWeight: '800', color: colors.textDim, letterSpacing: 0.8, marginBottom: 8 },
   scoreRow: {
     flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.card,

@@ -11,9 +11,12 @@ export interface SavedMatch {
   teams: string[]
   venue: string
   date: string
+  dateTimeGMT?: string
   matchType?: string
   status: string
   teamInfo?: Match['teamInfo']
+  score?: Match['score']
+  series_id?: string
   matchStarted: boolean
   matchEnded: boolean
 }
@@ -25,9 +28,12 @@ function toSaved(match: Match): SavedMatch {
     teams: match.teams,
     venue: match.venue,
     date: match.date,
+    dateTimeGMT: match.dateTimeGMT,
     matchType: match.matchType,
     status: match.status,
     teamInfo: match.teamInfo,
+    score: match.score,
+    series_id: match.series_id,
     matchStarted: match.matchStarted,
     matchEnded: match.matchEnded,
   }
@@ -80,5 +86,23 @@ export async function syncFavoritesFromServer(): Promise<SavedMatch[]> {
     return merged
   } catch {
     return loadLocalFavorites()
+  }
+}
+
+export function savedToMatch(s: SavedMatch): Match {
+  return {
+    id: s.id,
+    name: s.name,
+    teams: s.teams,
+    teamInfo: s.teamInfo ?? [],
+    venue: s.venue,
+    date: s.date,
+    dateTimeGMT: s.dateTimeGMT ?? s.date,
+    matchType: s.matchType,
+    status: s.status,
+    score: s.score ?? [],
+    series_id: s.series_id,
+    matchStarted: s.matchStarted,
+    matchEnded: s.matchEnded,
   }
 }

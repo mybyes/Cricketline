@@ -15,6 +15,13 @@ export const metadata: Metadata = {
     siteName: 'CricketFast',
     locale: 'en_IN',
     type: 'website',
+    images: [{ url: `${site}/og.svg`, width: 1200, height: 630, alt: 'CricketFast Live Line' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'CricketFast Live Line',
+    description: 'Live cricket scores — IPL, Tests, ODIs & T20',
+    images: [`${site}/og.svg`],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: site },

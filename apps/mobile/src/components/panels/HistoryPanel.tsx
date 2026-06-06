@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { fetchMatchHistory } from '../../lib/api'
-import type { Match } from '../../types/match'
+import type { Match, RootStackParamList } from '../../types/match'
 import { colors } from '../../theme/colors'
+import { formatScore, formatTimeShort } from '../../theme/matchUtils'
+
+type Nav = NativeStackNavigationProp<RootStackParamList>
 
 export function HistoryPanel({ matchId }: { matchId: string }) {
   const [loading, setLoading] = useState(true)
@@ -39,18 +44,36 @@ export function HistoryPanel({ matchId }: { matchId: string }) {
 }
 
 function HistorySection({ title, matches, empty }: { title: string; matches: Match[]; empty: string }) {
+  const navigation = useNavigation<Nav>()
+
   return (
     <View style={styles.section}>
       <Text style={styles.label}>{title}</Text>
       {matches.length === 0 ? (
         <Text style={styles.empty}>{empty}</Text>
       ) : (
-        matches.map((m) => (
-          <View key={m.id} style={styles.row}>
-            <Text style={styles.name} numberOfLines={1}>{m.teams.join(' vs ')}</Text>
-            <Text style={styles.status} numberOfLines={2}>{m.status}</Text>
-          </View>
-        ))
+        matches.map((m) => {
+          const scoreLine = m.score?.length
+            ? m.score.map((s) => formatScore(s)).join(' · ')
+            : null
+          return (
+            <Pressable
+              key={m.id}
+              style={styles.row}
+              onPress={() => navigation.navigate('Scoreboard', {
+                matchId: m.id,
+                matchName: m.teams.join(' vs '),
+                seriesId: m.series_id,
+                matchType: m.matchType,
+              })}
+            >
+              <Text style={styles.name} numberOfLines={1}>{m.teams.join(' vs ')}</Text>
+              {scoreLine && <Text style={styles.scores}>{scoreLine}</Text>}
+              <Text style={styles.status} numberOfLines={2}>{m.status}</Text>
+              <Text style={styles.meta}>{formatTimeShort(m.dateTimeGMT)} · Tap to open</Text>
+            </Pressable>
+          )
+        })
       )}
     </View>
   )
@@ -61,7 +84,9 @@ const styles = StyleSheet.create({
   label: { fontSize: 10, fontWeight: '800', color: colors.textDim, letterSpacing: 0.8, marginBottom: 8 },
   row: { backgroundColor: colors.card, padding: 12, marginBottom: 6, borderRadius: 4, borderWidth: 1, borderColor: colors.border },
   name: { fontSize: 13, fontWeight: '700', color: colors.text },
+  scores: { fontSize: 12, fontWeight: '700', color: colors.score, marginTop: 4 },
   status: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
+  meta: { fontSize: 10, color: colors.textDim, marginTop: 6 },
   empty: { fontSize: 12, color: colors.textDim, textAlign: 'center', padding: 16 },
   error: { color: colors.live, textAlign: 'center', marginTop: 24 },
 })

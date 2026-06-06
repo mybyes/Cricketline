@@ -38,8 +38,8 @@ a:hover { text-decoration: underline; }
 .brand { flex: 1; min-width: 200px; }
 .brand-link { display: flex; align-items: center; gap: 10px; text-decoration: none !important; color: #fff; }
 .brand-icon { font-size: 1.8rem; background: rgba(255,255,255,.15); width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-.brand h1 { margin: 0; font-size: 1.2rem; font-weight: 800; }
-.brand p { margin: 2px 0 0; opacity: .85; font-size: .75rem; }
+.brand-title { margin: 0; font-size: 1.2rem; font-weight: 800; }
+.brand-tagline { margin: 2px 0 0; opacity: .85; font-size: .75rem; }
 .top-nav { display: flex; gap: 4px; }
 .top-nav a {
   color: rgba(255,255,255,.9);
@@ -312,6 +312,7 @@ a:hover { text-decoration: underline; }
   padding: 28px 0;
 }
 .hero-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.hero-banner h1, .hero-banner .hero-h1 { margin: 0; font-size: 1.6rem; font-weight: 900; }
 .hero-banner h2 { margin: 0; font-size: 1.6rem; font-weight: 900; }
 .hero-banner p { margin: 8px 0 0; opacity: .9; font-size: .95rem; }
 .hero-stats { display: flex; gap: 16px; }

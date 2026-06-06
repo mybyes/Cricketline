@@ -27,10 +27,21 @@ export function liveRates(data: ScorecardData) {
   return { crr, rrr, target, runs: active.r, wickets: active.w, overs: active.o }
 }
 
+export function parseDayFromStatus(status: string): number | null {
+  const m = status.match(/day\s*(\d+)/i)
+  return m ? parseInt(m[1], 10) : null
+}
+
 /** Parse session hints from Test match status text */
 export function parseSessions(status: string) {
-  const markers = ['lunch', 'tea', 'stumps', 'session', 'day']
+  const markers = ['lunch', 'tea', 'stumps', 'innings break', 'rain', 'bad light']
   const lower = status.toLowerCase()
   const hits = markers.filter((m) => lower.includes(m))
-  return { status, markers: hits, isTestSession: hits.length > 0 }
+  const day = parseDayFromStatus(status)
+  return { status, markers: hits, day, isBreak: hits.length > 0 }
+}
+
+export function inningRunRate(r: number, o: number) {
+  if (!o) return null
+  return (r / o).toFixed(2)
 }

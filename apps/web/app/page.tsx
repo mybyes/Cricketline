@@ -3,22 +3,61 @@ import { LiveScoresPanel } from '@/components/LiveScoresPanel'
 import { PageRefresher } from '@/components/PageRefresher'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
-import { FALLBACK_SERIES, getSeriesList } from '@/lib/api'
+import { FALLBACK_SERIES, getLiveMatches, getRecentMatches, getSeriesList, getUpcomingMatches } from '@/lib/api'
+import { getSiteUrl } from '@/lib/site'
 
 export const revalidate = 15
 
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'What is live line, session and scorecard?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'The CricketFast mobile app includes 8 match tabs: Live Line, Session, Rates, Scorecard, History, Squad, Table and Info.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Is CricketFast free?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes — no login, no subscription. Web and app are free.',
+      },
+    },
+  ],
+}
+
 export default async function HomePage() {
-  const seriesRes = await getSeriesList()
+  const [seriesRes, liveRes, recentRes, upcomingRes] = await Promise.all([
+    getSeriesList(),
+    getLiveMatches(),
+    getRecentMatches(),
+    getUpcomingMatches(),
+  ])
   const series = (seriesRes.data?.length ? seriesRes.data : FALLBACK_SERIES).slice(0, 14)
+  const stale = liveRes.stale || recentRes.stale || upcomingRes.stale
+  const error = liveRes.error && !liveRes.data.length ? liveRes.error : undefined
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: 'CricketFast Live Line',
+        url: getSiteUrl(),
+        description: 'Live cricket scores, ball-by-ball updates and scorecards for IPL, Tests, ODIs and T20.',
+      }) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <PageRefresher intervalMs={15_000} />
       <SiteHeader />
       <section className="hero-banner">
         <div className="container hero-inner">
           <div>
-            <h2>Live Cricket Line</h2>
+            <h1 className="hero-h1">Live Cricket Scores</h1>
             <p>Ball-by-ball scores · IPL · Tests · ODIs · T20 — free, no login</p>
           </div>
           <div className="hero-stats">
@@ -31,7 +70,13 @@ export default async function HomePage() {
 
       <div className="container page-layout">
         <main className="main-col">
-          <LiveScoresPanel />
+          <LiveScoresPanel initial={{
+            live: liveRes.data,
+            recent: recentRes.data,
+            upcoming: upcomingRes.data,
+            stale,
+            error,
+          }} />
           <div className="ad-slot">Advertisement</div>
           <section className="seo-block" id="download">
             <h2>CricketFast Live Line — Fastest Cricket Scores</h2>

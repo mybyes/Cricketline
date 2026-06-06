@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#1b5e20"/>
+  <rect x="0" y="480" width="1200" height="150" fill="#0d3d1a"/>
+  <text x="80" y="200" fill="#ffffff" font-family="system-ui,sans-serif" font-size="72" font-weight="800">CricketFast</text>
+  <text x="80" y="290" fill="#c8e6c9" font-family="system-ui,sans-serif" font-size="42" font-weight="600">Live Cricket Scores &amp; Live Line</text>
+  <text x="80" y="380" fill="#a5d6a7" font-family="system-ui,sans-serif" font-size="28">IPL · Tests · ODIs · T20  Free</text>
+  <text x="80" y="560" fill="#ffffff" font-size="120"><Ï</text>
+</svg>

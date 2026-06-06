@@ -22,11 +22,6 @@ export function RatesPanel({ data }: { data: ScorecardData }) {
         )}
       </View>
 
-      <View style={[styles.card, styles.comingSoon]}>
-        <Text style={styles.label}>MATCH RATES (FANCY)</Text>
-        <Text style={styles.muted}>Lambi, Khana, Fav & Draw rates require a dedicated odds feed.</Text>
-        <Text style={styles.muted}>Coming in Phase 3 with a licensed provider.</Text>
-      </View>
     </View>
   )
 }
@@ -42,7 +37,6 @@ function RateRow({ label, value, highlight }: { label: string; value: string; hi
 
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.card, borderRadius: 6, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
-  comingSoon: { backgroundColor: colors.surfaceAlt },
   label: { fontSize: 10, fontWeight: '800', color: colors.textDim, letterSpacing: 0.8, marginBottom: 10 },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
   rowLabel: { fontSize: 13, color: colors.textMuted },

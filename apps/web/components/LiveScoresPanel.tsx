@@ -1,12 +1,21 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import type { Match } from '@/lib/api'
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 type Tab = 'live' | 'recent' | 'upcoming'
+
+export interface LiveScoresInitial {
+  live: Match[]
+  recent: Match[]
+  upcoming: Match[]
+  stale?: boolean
+  error?: string
+}
 
 async function fetchMatches(path: string): Promise<{ data: Match[]; stale: boolean; error?: string }> {
   if (!API) return { data: [], stale: false, error: 'NEXT_PUBLIC_API_URL not set on Vercel' }
@@ -40,7 +49,9 @@ function WebMatchCard({ match }: { match: Match }) {
       </div>
       <div className="w-match-teams">
         <div className="w-team">
-          {match.teamInfo?.[0]?.img && <img src={match.teamInfo[0].img} alt="" className="w-logo" />}
+          {match.teamInfo?.[0]?.img && (
+            <Image src={match.teamInfo[0].img} alt="" className="w-logo" width={36} height={36} unoptimized />
+          )}
           <div>
             <div className="w-short">{match.teamInfo?.[0]?.shortname ?? match.teams[0]}</div>
             <div className="w-full">{match.teams[0]}</div>
@@ -54,7 +65,9 @@ function WebMatchCard({ match }: { match: Match }) {
             <div className="w-short">{match.teamInfo?.[1]?.shortname ?? match.teams[1]}</div>
             <div className="w-full">{match.teams[1]}</div>
           </div>
-          {match.teamInfo?.[1]?.img && <img src={match.teamInfo[1].img} alt="" className="w-logo" />}
+          {match.teamInfo?.[1]?.img && (
+            <Image src={match.teamInfo[1].img} alt="" className="w-logo" width={36} height={36} unoptimized />
+          )}
         </div>
       </div>
       {scores.length > 2 && (
@@ -73,14 +86,13 @@ function WebMatchCard({ match }: { match: Match }) {
   )
 }
 
-export function LiveScoresPanel() {
+export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
   const [tab, setTab] = useState<Tab>('live')
-  const [live, setLive] = useState<Match[]>([])
-  const [recent, setRecent] = useState<Match[]>([])
-  const [upcoming, setUpcoming] = useState<Match[]>([])
-  const [stale, setStale] = useState(false)
-  const [error, setError] = useState<string>()
-  const [tick, setTick] = useState(0)
+  const [live, setLive] = useState<Match[]>(initial?.live ?? [])
+  const [recent, setRecent] = useState<Match[]>(initial?.recent ?? [])
+  const [upcoming, setUpcoming] = useState<Match[]>(initial?.upcoming ?? [])
+  const [stale, setStale] = useState(initial?.stale ?? false)
+  const [error, setError] = useState<string | undefined>(initial?.error)
 
   const load = useCallback(async () => {
     const [l, r, u] = await Promise.all([
@@ -93,11 +105,9 @@ export function LiveScoresPanel() {
     setUpcoming(u.data)
     setStale(l.stale || r.stale || u.stale)
     setError(l.error && !l.data.length ? l.error : undefined)
-    setTick((t) => t + 1)
   }, [])
 
   useEffect(() => {
-    load()
     const id = setInterval(load, 15_000)
     return () => clearInterval(id)
   }, [load])
@@ -125,7 +135,6 @@ export function LiveScoresPanel() {
             {t === 'live' ? `Live (${live.length})` : t === 'recent' ? `Results (${recent.length})` : `Fixtures (${upcoming.length})`}
           </button>
         ))}
-        <span className="tab-tick" key={tick}>updated {new Date().toLocaleTimeString()}</span>
       </div>
 
       {list.length === 0 ? (

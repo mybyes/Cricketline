@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -27,9 +27,6 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stale, setStale] = useState(false)
-  const lastFetch = useRef(Date.now())
-  const [tick, setTick] = useState(0)
-
   const load = useCallback(async (opts?: { pull?: boolean; silent?: boolean }) => {
     const pull = opts?.pull ?? false
     const silent = opts?.silent ?? false
@@ -41,8 +38,6 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
       if (!res.success) throw new Error(res.error ?? 'API error')
       setMatches(res.data)
       setStale(!!res.stale)
-      lastFetch.current = Date.now()
-      setTick((t) => t + 1)
     } catch (e: any) {
       setError(e.message ?? 'Failed to load')
     } finally {
@@ -54,11 +49,9 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
   useEffect(() => {
     load()
     const poll = setInterval(() => load({ silent: true }), pollMs)
-    const clock = setInterval(() => setTick((t) => t + 1), 1000)
-    return () => { clearInterval(poll); clearInterval(clock) }
+    return () => clearInterval(poll)
   }, [load, pollMs])
 
-  const updatedAgo = Math.floor((Date.now() - lastFetch.current) / 1000)
   const liveCount = matches.filter((m) => m.matchStarted && !m.matchEnded).length
 
   return (
@@ -96,12 +89,10 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
         <FlatList
           data={matches}
           keyExtractor={(m) => m.id}
-          extraData={tick}
           renderItem={({ item }) => (
             <MatchCard
               match={item}
               showDate={showDate}
-              updatedAgo={updatedAgo}
               isFavorite={favoriteIds.has(item.id)}
               onToggleFavorite={() => toggle(item)}
               onPress={() => navigation.navigate('Scoreboard', {

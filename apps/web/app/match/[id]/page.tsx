@@ -1,28 +1,59 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { AppDownloadButton } from '@/components/AppDownloadButton'
 import { PageRefresher } from '@/components/PageRefresher'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
+import { getSiteUrl } from '@/lib/site'
 
 const API = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'
 
 export const revalidate = 12
 
-async function getScore(id: string) {
+type MatchData = {
+  id: string; name: string; status: string; venue: string; date: string; dateTimeGMT?: string
+  teams: string[]; matchType: string; score: { r: number; w: number; o: number; inning: string }[]
+  teamInfo: { shortname: string; img: string }[]
+  tossWinner?: string; tossChoice?: string
+  matchStarted: boolean; matchEnded: boolean
+}
+
+async function getScore(id: string): Promise<MatchData | null> {
   try {
     const res = await fetch(`${API}/match/${id}/score`, { next: { revalidate: 12 } })
     const body = await res.json()
     if (!body.success) return null
-    return body.data as {
-      id: string; name: string; status: string; venue: string; date: string
-      teams: string[]; matchType: string; score: { r: number; w: number; o: number; inning: string }[]
-      teamInfo: { shortname: string; img: string }[]
-      tossWinner?: string; tossChoice?: string
-      matchStarted: boolean; matchEnded: boolean
-    }
+    return body.data as MatchData
   } catch {
     return null
+  }
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const data = await getScore(id)
+  const site = getSiteUrl()
+  if (!data) return { title: 'Match not found | CricketFast' }
+
+  const teams = data.teams.join(' vs ')
+  const scoreStr = data.score?.map((s) => `${s.r}/${s.w}`).join(' · ') ?? ''
+  const title = `${teams} Live Score — ${data.status.slice(0, 60)} | CricketFast`
+  const description = `${data.status}${scoreStr ? `. Scores: ${scoreStr}` : ''}. ${data.venue}. Free live cricket scorecard.`
+  const url = `${site}/match/${id}`
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: 'CricketFast',
+      locale: 'en_IN',
+      type: 'website',
+    },
   }
 }
 
@@ -31,11 +62,28 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const data = await getScore(id)
   if (!data) notFound()
 
+  const site = getSiteUrl()
   const fmt = data.matchType?.toUpperCase() ?? 'MATCH'
   const live = data.matchStarted && !data.matchEnded
+  const scoreStr = data.score?.map((s) => `${s.r}/${s.w} (${s.o})`).join(' · ')
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: data.teams.join(' vs '),
+    description: data.status,
+    startDate: data.dateTimeGMT ?? data.date,
+    eventStatus: live ? 'https://schema.org/EventScheduled' : 'https://schema.org/EventCancelled',
+    location: { '@type': 'Place', name: data.venue },
+    url: `${site}/match/${id}`,
+    sport: 'Cricket',
+    homeTeam: { '@type': 'SportsTeam', name: data.teams[0] },
+    awayTeam: { '@type': 'SportsTeam', name: data.teams[1] },
+  }
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PageRefresher intervalMs={15_000} />
       <SiteHeader />
       <div className="container match-page">
@@ -56,6 +104,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               </div>
             ))}
           </div>
+          {scoreStr && <p className="match-meta">{scoreStr}</p>}
           {data.tossWinner && (
             <p className="match-meta">Toss: {data.tossWinner} chose to {data.tossChoice}</p>
           )}
