@@ -5,26 +5,43 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native'
 import type { RouteProp } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { fetchMatchScore } from '../lib/api'
+import { fetchMatchBbb, fetchMatchScore } from '../lib/api'
 import { LiveBadge } from '../components/LiveBadge'
 import { LiveLinePanel } from '../components/LiveLinePanel'
+import { HistoryPanel } from '../components/panels/HistoryPanel'
+import { RatesPanel } from '../components/panels/RatesPanel'
+import { SessionPanel } from '../components/panels/SessionPanel'
+import { SquadPanel } from '../components/panels/SquadPanel'
+import { TablePanel } from '../components/panels/TablePanel'
+import type { BbbBall } from '../types/extras'
 import type { RootStackParamList } from '../types/match'
 import type { InningScorecard, ScorecardData } from '../types/scorecard'
 import { colors } from '../theme/colors'
 import { formatScore } from '../theme/matchUtils'
 
 type Route = RouteProp<RootStackParamList, 'Scoreboard'>
-type Tab = 'line' | 'scorecard' | 'info'
+type Tab = 'line' | 'session' | 'rates' | 'scorecard' | 'history' | 'squad' | 'table' | 'info'
 
-function Segment({ tabs, active, onChange }: { tabs: { key: Tab; label: string }[]; active: Tab; onChange: (k: Tab) => void }) {
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'line', label: 'Live Line' },
+  { key: 'session', label: 'Session' },
+  { key: 'rates', label: 'Rates' },
+  { key: 'scorecard', label: 'Scorecard' },
+  { key: 'history', label: 'History' },
+  { key: 'squad', label: 'Squad' },
+  { key: 'table', label: 'Table' },
+  { key: 'info', label: 'Info' },
+]
+
+function TabBar({ active, onChange }: { active: Tab; onChange: (k: Tab) => void }) {
   return (
-    <View style={styles.segment}>
-      {tabs.map((t) => (
-        <Pressable key={t.key} onPress={() => onChange(t.key)} style={[styles.segBtn, active === t.key && styles.segBtnActive]}>
-          <Text style={[styles.segText, active === t.key && styles.segTextActive]}>{t.label}</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
+      {TABS.map((t) => (
+        <Pressable key={t.key} onPress={() => onChange(t.key)} style={[styles.tabBtn, active === t.key && styles.tabBtnActive]}>
+          <Text style={[styles.tabText, active === t.key && styles.tabTextActive]}>{t.label}</Text>
         </Pressable>
       ))}
-    </View>
+    </ScrollView>
   )
 }
 
@@ -52,6 +69,11 @@ function BattingTable({ inning }: { inning: InningScorecard }) {
           </View>
         )
       })}
+      {inning.extras && (
+        <View style={styles.extrasRow}>
+          <Text style={styles.extrasText}>Extras {inning.extras.t} (b {inning.extras.b ?? 0}, lb {inning.extras.lb ?? 0}, w {inning.extras.w ?? 0}, nb {inning.extras.nb ?? 0})</Text>
+        </View>
+      )}
       {inning.totals && (
         <View style={styles.totalsRow}>
           <Text style={styles.totalsText}>Total: {inning.totals.r}/{inning.totals.w} ({inning.totals.o} ov)</Text>
@@ -68,14 +90,15 @@ function BowlingTable({ inning }: { inning: InningScorecard }) {
       <Text style={styles.sectionLabel}>Bowling</Text>
       <View style={styles.tHead}>
         <Text style={[styles.th, { flex: 3 }]}>Bowler</Text>
-        <Text style={styles.th}>O</Text><Text style={styles.th}>R</Text>
+        <Text style={styles.th}>O</Text><Text style={styles.th}>M</Text><Text style={styles.th}>R</Text>
         <Text style={styles.th}>W</Text><Text style={styles.th}>Econ</Text>
       </View>
       {inning.bowling.map((row, i) => (
         <View key={i} style={[styles.tRow, i % 2 === 0 && styles.rowAlt]}>
           <Text style={[styles.td, { flex: 3, textAlign: 'left', fontWeight: '600' }]}>{row.bowler.name}</Text>
-          <Text style={styles.td}>{row.o}</Text><Text style={styles.td}>{row.r}</Text>
-          <Text style={styles.td}>{row.w}</Text><Text style={styles.td}>{row.eco.toFixed(1)}</Text>
+          <Text style={styles.td}>{row.o}</Text><Text style={styles.td}>{row.m}</Text>
+          <Text style={styles.td}>{row.r}</Text><Text style={styles.td}>{row.w}</Text>
+          <Text style={styles.td}>{row.eco.toFixed(1)}</Text>
         </View>
       ))}
     </View>
@@ -103,38 +126,46 @@ function ScoreHero({ data }: { data: ScorecardData }) {
 
 export function ScoreboardScreen() {
   const navigation = useNavigation()
-  const { matchId, matchName } = useRoute<Route>().params
+  const { matchId, matchName, seriesId } = useRoute<Route>().params
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<ScorecardData | null>(null)
+  const [bbb, setBbb] = useState<BbbBall[]>([])
   const [tab, setTab] = useState<Tab>('line')
   const [inningIdx, setInningIdx] = useState(0)
   const lastFetch = useRef(Date.now())
   const [updatedAgo, setUpdatedAgo] = useState(0)
 
-  const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true)
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false
+    if (silent) setRefreshing(true)
+    else setLoading(true)
     setError(null)
     try {
-      const res = await fetchMatchScore(matchId)
-      if (!res.success) throw new Error(res.error ?? 'API error')
-      setData(res.data)
+      const [scoreRes, bbbRes] = await Promise.all([
+        fetchMatchScore(matchId),
+        fetchMatchBbb(matchId).catch(() => ({ success: true, data: [] as BbbBall[] })),
+      ])
+      if (!scoreRes.success) throw new Error(scoreRes.error ?? 'API error')
+      setData(scoreRes.data)
+      if (bbbRes.success && Array.isArray(bbbRes.data)) setBbb(bbbRes.data)
       lastFetch.current = Date.now()
       setUpdatedAgo(0)
     } catch (e: any) {
       setError(e.message ?? 'Failed to load scorecard')
     } finally {
-      setLoading(false); setRefreshing(false)
+      setLoading(false)
+      setRefreshing(false)
     }
   }, [matchId])
 
   useEffect(() => {
-    load()
-    const poll = setInterval(() => load(true), 12_000)
+    load({ silent: false })
+    const poll = setInterval(() => load({ silent: true }), 12_000)
     const clock = setInterval(() => setUpdatedAgo(Math.floor((Date.now() - lastFetch.current) / 1000)), 1000)
     return () => { clearInterval(poll); clearInterval(clock) }
-  }, [load])
+  }, [matchId])
 
   const innings = data?.scorecard ?? []
   const activeInning = innings[inningIdx]
@@ -149,30 +180,27 @@ export function ScoreboardScreen() {
         <Text style={styles.matchTitle} numberOfLines={2}>{matchName}</Text>
       </SafeAreaView>
 
-      {loading && !refreshing ? (
+      {loading && !data ? (
         <ActivityIndicator color={colors.accent} style={styles.loader} />
-      ) : error ? (
+      ) : error && !data ? (
         <View style={styles.center}>
           <Text style={styles.error}>{error}</Text>
-          <Pressable onPress={() => load()} style={styles.retryBtn}><Text style={styles.retryText}>Retry</Text></Pressable>
+          <Pressable onPress={() => load({ silent: false })} style={styles.retryBtn}><Text style={styles.retryText}>Retry</Text></Pressable>
         </View>
       ) : data ? (
         <ScrollView
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.accent} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load({ silent: true })} tintColor={colors.accent} />}
           stickyHeaderIndices={[2]}
         >
           <ScoreHero data={data} />
-          <Segment
-            tabs={[
-              { key: 'line', label: 'Live Line' },
-              { key: 'scorecard', label: 'Scorecard' },
-              { key: 'info', label: 'Info' },
-            ]}
-            active={tab}
-            onChange={(k) => setTab(k as Tab)}
-          />
+          <TabBar active={tab} onChange={setTab} />
           <View style={styles.body}>
-            {tab === 'line' && <LiveLinePanel data={data} updatedAgo={updatedAgo} />}
+            {tab === 'line' && <LiveLinePanel data={data} updatedAgo={updatedAgo} bbb={bbb} />}
+            {tab === 'session' && <SessionPanel data={data} />}
+            {tab === 'rates' && <RatesPanel data={data} />}
+            {tab === 'history' && <HistoryPanel matchId={matchId} />}
+            {tab === 'squad' && <SquadPanel matchId={matchId} />}
+            {tab === 'table' && <TablePanel seriesId={seriesId} />}
             {tab === 'info' && (
               <View style={styles.infoCard}>
                 <InfoRow label="Venue" value={data.venue} />
@@ -226,11 +254,11 @@ const styles = StyleSheet.create({
   heroTeamName: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   heroScore: { fontSize: 26, fontWeight: '900', color: colors.score, marginTop: 4 },
   heroVs: { fontSize: 14, color: colors.textDim, fontWeight: '600', marginHorizontal: 12 },
-  segment: { flexDirection: 'row', backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
-  segBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 3, borderBottomColor: 'transparent' },
-  segBtnActive: { borderBottomColor: colors.header },
-  segText: { fontSize: 13, fontWeight: '600', color: colors.textDim },
-  segTextActive: { color: colors.header, fontWeight: '800' },
+  tabBar: { backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
+  tabBtn: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: 'transparent' },
+  tabBtnActive: { borderBottomColor: colors.header },
+  tabText: { fontSize: 12, fontWeight: '600', color: colors.textDim },
+  tabTextActive: { color: colors.header, fontWeight: '800' },
   body: { padding: 12, paddingBottom: 40 },
   inningTab: { paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderRadius: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   inningTabActive: { backgroundColor: colors.header, borderColor: colors.header },
@@ -248,6 +276,8 @@ const styles = StyleSheet.create({
   strikerStat: { color: colors.score, fontWeight: '800' },
   dismissal: { fontSize: 11, color: colors.textDim, marginTop: 2 },
   td: { flex: 1, fontSize: 13, color: colors.text, textAlign: 'center' },
+  extrasRow: { padding: 12, backgroundColor: colors.surfaceAlt },
+  extrasText: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
   totalsRow: { padding: 12, backgroundColor: colors.surfaceAlt },
   totalsText: { fontSize: 14, fontWeight: '700', color: colors.score },
   infoCard: { backgroundColor: colors.card, borderRadius: 6, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },

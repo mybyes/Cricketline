@@ -104,7 +104,12 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
               updatedAgo={updatedAgo}
               isFavorite={favoriteIds.has(item.id)}
               onToggleFavorite={() => toggle(item)}
-              onPress={() => navigation.navigate('Scoreboard', { matchId: item.id, matchName: item.teams.join(' vs ') })}
+              onPress={() => navigation.navigate('Scoreboard', {
+                matchId: item.id,
+                matchName: item.teams.join(' vs '),
+                seriesId: (item as { series_id?: string }).series_id,
+                matchType: item.matchType,
+              })}
             />
           )}
           contentContainerStyle={styles.list}

@@ -5,6 +5,8 @@ import { Redis } from 'ioredis'
 import { initDb } from './db'
 import matchesRoute from './routes/matches'
 import scoreRoute from './routes/score'
+import matchExtrasRoute from './routes/matchExtras'
+import seriesRoute from './routes/series'
 import favoritesRoute from './routes/favorites'
 import devicesRoute from './routes/devices'
 import { initStoreRedis } from './services/store'
@@ -34,6 +36,8 @@ async function start() {
   app.register(cors, { origin: '*' })
   app.register(matchesRoute)
   app.register(scoreRoute)
+  app.register(matchExtrasRoute)
+  app.register(seriesRoute)
   app.register(favoritesRoute)
   app.register(devicesRoute)
 

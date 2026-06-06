@@ -44,7 +44,11 @@ export function FavoritesScreen() {
           renderItem={({ item }) => {
             const m = toMatch(item)
             return <MatchCard match={m} showDate isFavorite onToggleFavorite={() => toggle(m)}
-              onPress={() => navigation.navigate('Scoreboard', { matchId: item.id, matchName: item.name })} />
+              onPress={() => navigation.navigate('Scoreboard', {
+                matchId: item.id,
+                matchName: item.name,
+                seriesId: (item as { series_id?: string }).series_id,
+              })} />
           }}
           contentContainerStyle={{ paddingTop: 8, paddingBottom: 24 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.accent} />}

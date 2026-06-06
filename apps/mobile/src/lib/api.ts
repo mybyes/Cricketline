@@ -1,5 +1,6 @@
 import type { LiveMatchesResponse } from '../types/match'
 import type { ScorecardResponse } from '../types/scorecard'
+import type { BbbBall, MatchHistoryData, SeriesItem, SeriesTableData, SquadTeam } from '../types/extras'
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000'
 
@@ -24,6 +25,30 @@ export async function fetchUpcomingMatches(): Promise<LiveMatchesResponse> {
 
 export async function fetchMatchScore(matchId: string): Promise<ScorecardResponse> {
   return api(`/match/${matchId}/score`)
+}
+
+export async function fetchMatchSquad(matchId: string) {
+  return api<{ success: boolean; data: SquadTeam[]; error?: string }>(`/match/${matchId}/squad`)
+}
+
+export async function fetchMatchBbb(matchId: string) {
+  return api<{ success: boolean; data: BbbBall[]; error?: string }>(`/match/${matchId}/bbb`)
+}
+
+export async function fetchMatchHistory(matchId: string) {
+  return api<{ success: boolean; data: MatchHistoryData; error?: string }>(`/match/${matchId}/history`)
+}
+
+export async function fetchSeriesTable(seriesId: string) {
+  return api<{ success: boolean; data: SeriesTableData; error?: string }>(`/series/${seriesId}/table`)
+}
+
+export async function fetchSeriesList() {
+  return api<{ success: boolean; data: SeriesItem[]; error?: string }>('/series')
+}
+
+export async function fetchRecentMatches() {
+  return api<LiveMatchesResponse>('/matches/recent')
 }
 
 export async function getFavoritesRemote(deviceId: string) {

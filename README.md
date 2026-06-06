@@ -2,45 +2,50 @@
 
 **Live cricket scores, scorecards & upcoming fixtures** — free, fast, no login required.
 
-Real-time cricket app built as a monorepo: Fastify API on Railway, Expo mobile app, Redis cache, optional PostgreSQL.
+Monorepo: Fastify API (Railway), Expo mobile app (live-line depth), Next.js web portal (SEO).
+
+## Apps
+
+| App | Purpose | Dev command |
+|-----|---------|-------------|
+| `apps/backend` | API + CricAPI + Redis | `pnpm dev:backend` |
+| `apps/mobile` | Android/iOS live-line app (8 match tabs) | `pnpm dev:mobile` |
+| `apps/web` | SSR portal for cricketfastliveline.in | `pnpm dev:web` |
 
 ## Features
 
-- **Live scores** — auto-refresh every 30s (list) / 12s (scoreboard)
-- **Live line** — ball-by-ball status, batters on crease, bowler info
-- **Full scorecards** — batting & bowling tables, tap any match
-- **Upcoming matches** — scheduled fixtures with dates
-- **Favorites** — save matches with ★ (no account needed)
-- **Push notifications** — device registration (delivery coming soon)
-- **Works everywhere** — browser, iOS, Android via Expo
+### Mobile app (deep live-line)
+- **8 match tabs:** Live Line, Session, Rates, Scorecard, History, Squad, Table, Info
+- Ball-by-ball (when API provides), CRR/RRR/target, extras on scorecard
+- Favorites ★, fixtures, settings — no login
 
-## Stack
-
-| Layer | Tech |
-|-------|------|
-| Backend | Fastify, TypeScript, Docker |
-| Cache | Upstash Redis |
-| Database | PostgreSQL (optional — Supabase free tier) |
-| Mobile | Expo 56, React Native, React Navigation |
-| API data | CricAPI |
-| Hosting | Railway (API), Vercel (web) |
+### Web portal (discovery / SEO)
+- Server-rendered live scores, recent results, fixtures
+- Popular series, T20 rankings, FAQs, ad slots
+- Domain: `cricketfastliveline.in` via Vercel (`apps/web`)
 
 ## Quick start
 
 ```bash
 pnpm install
-
-# Backend (local)
-pnpm dev:backend
-
-# Mobile (browser — press w)
-pnpm dev:mobile
+pnpm dev:backend    # :3000
+pnpm dev:mobile     # Expo — press w for browser
+pnpm dev:web        # :3001 Next.js portal
 ```
 
-Set `apps/mobile/.env`:
+### Env
 
+`apps/backend/.env` — `CRICAPI_KEY`, `UPSTASH_REDIS_URL`
+
+`apps/mobile/.env`:
 ```
 EXPO_PUBLIC_API_URL=https://your-backend.up.railway.app
+```
+
+`apps/web/.env`:
+```
+API_URL=https://your-backend.up.railway.app
+NEXT_PUBLIC_SITE_URL=https://cricketfastliveline.in
 ```
 
 ## API
@@ -49,46 +54,32 @@ EXPO_PUBLIC_API_URL=https://your-backend.up.railway.app
 |----------|-------------|
 | `GET /health` | Health check |
 | `GET /matches/live` | Live matches |
+| `GET /matches/recent` | Recent results |
 | `GET /matches/upcoming` | Upcoming fixtures |
 | `GET /match/:id/score` | Full scorecard |
+| `GET /match/:id/squad` | Playing XI |
+| `GET /match/:id/bbb` | Ball-by-ball |
+| `GET /match/:id/history` | H2H + recent form |
+| `GET /series` | Series list |
+| `GET /series/:id/table` | Points table |
 | `GET /favorites?device_id=` | Saved matches |
-| `POST /favorites` | Add favorite |
-| `DELETE /favorites/:id` | Remove favorite |
-| `POST /devices/register` | Push token (optional) |
 
 ## Deploy
 
 ### Backend (Railway)
+`CRICAPI_KEY`, `UPSTASH_REDIS_URL`, optional `DATABASE_URL`
 
-Set `CRICAPI_KEY`, `UPSTASH_REDIS_URL`. Optional `DATABASE_URL` for Postgres — if unreachable, API falls back to Redis.
-
-### Web (Vercel)
-
-1. Import repo on [vercel.com](https://vercel.com)
-2. Set **Root Directory** → `apps/mobile`
-3. Environment variables:
-
-```
-EXPO_PUBLIC_API_URL=https://your-backend.up.railway.app
-EXPO_PUBLIC_SITE_URL=https://your-app.vercel.app
-```
-
-4. Deploy — runs `pnpm build:web` automatically
-5. Submit sitemap in Google Search Console: `https://your-domain/sitemap.xml`
-
-Build locally:
-
-```bash
-pnpm build:web
-```
+### Web (Vercel) — **use this for cricketfastliveline.in**
+1. Root directory: `apps/web`
+2. Env: `API_URL`, `NEXT_PUBLIC_SITE_URL=https://cricketfastliveline.in`
+3. `pnpm build:web`
 
 ### Mobile (EAS)
-
-Expo Go for dev, `eas build` for production APK/IPA. Not deployed to Railway.
+`eas build --platform android --profile preview`
 
 ## Auth
 
-**Not required.** Favorites and push tokens use an anonymous device ID. No sign-up, no login.
+Not required. Anonymous device ID for favorites.
 
 ## License
 

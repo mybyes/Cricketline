@@ -9,13 +9,14 @@ export interface Match {
   teams: string[]
   teamInfo: { name: string; shortname: string; img: string }[]
   score?: { r: number; w: number; o: number; inning: string }[]
+  series_id?: string
   matchStarted: boolean
   matchEnded: boolean
 }
 
 export type RootStackParamList = {
   Home: undefined
-  Scoreboard: { matchId: string; matchName: string }
+  Scoreboard: { matchId: string; matchName: string; seriesId?: string; matchType?: string }
 }
 
 export type RootTabParamList = {
