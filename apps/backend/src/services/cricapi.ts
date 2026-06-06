@@ -11,6 +11,14 @@ export async function getLiveMatches() {
   return data.data as Match[]
 }
 
+export async function getUpcomingMatches() {
+  const { data } = await axios.get(`${BASE}/matches`, {
+    params: { apikey: KEY, offset: 0 }
+  })
+  if (data.status !== 'success') throw new Error('CricAPI error')
+  return (data.data as Match[]).filter((m) => !m.matchStarted && !m.matchEnded)
+}
+
 export async function getMatchScore(matchId: string) {
   const { data } = await axios.get(`${BASE}/match_scorecard`, {
     params: { apikey: KEY, id: matchId }
@@ -21,6 +29,7 @@ export async function getMatchScore(matchId: string) {
 export interface Match {
   id: string
   name: string
+  matchType?: string
   status: string
   venue: string
   date: string
@@ -43,8 +52,8 @@ interface TeamInfo {
 }
 
 interface Score {
-  r: number   // runs
-  w: number   // wickets
-  o: number   // overs
+  r: number
+  w: number
+  o: number
   inning: string
 }

@@ -18,6 +18,13 @@ export type RootStackParamList = {
   Scoreboard: { matchId: string; matchName: string }
 }
 
+export type RootTabParamList = {
+  Live: undefined
+  Upcoming: undefined
+  Favorites: undefined
+  Settings: undefined
+}
+
 export interface LiveMatchesResponse {
   success: boolean
   data: Match[]

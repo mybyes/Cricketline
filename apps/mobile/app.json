@@ -2,7 +2,9 @@
   "expo": {
     "name": "CricketFast",
     "slug": "cricketfast",
+    "owner": "mybyess-team",
     "version": "1.0.0",
+    "description": "Live cricket scores, ball-by-ball scorecards and upcoming fixtures. Free, fast — no login required.",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,7 +21,28 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "CricketFast — Live Cricket Scores",
+      "shortName": "CricketFast",
+      "description": "Live cricket scores, scorecards and upcoming matches. No login required.",
+      "themeColor": "#0a0f1a",
+      "backgroundColor": "#0a0f1a",
+      "display": "standalone",
+      "lang": "en",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#22c55e"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3957cd95-ebb3-42f4-8c68-27148cefb64e"
+      }
     }
   }
 }

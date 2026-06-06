@@ -6,6 +6,7 @@
   "scripts": {
     "dev:backend": "pnpm --filter backend dev",
     "dev:mobile": "pnpm --filter mobile start",
+    "dev:mobile:web": "pnpm --filter mobile web",
     "build:backend": "pnpm --filter backend build",
     "start:backend": "pnpm --filter backend start",
     "docker:up": "docker compose up --build",

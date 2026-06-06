@@ -1,7 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { colors } from '../theme/colors'
 
-export function LiveBadge({ ended }: { ended?: boolean }) {
+export function LiveBadge({ ended, started }: { ended?: boolean; started?: boolean }) {
+  if (!started && !ended) {
+    return (
+      <View style={[styles.badge, styles.upcoming]}>
+        <Text style={[styles.text, styles.upcomingText]}>UPCOMING</Text>
+      </View>
+    )
+  }
   if (ended) {
     return (
       <View style={[styles.badge, styles.ended]}>
@@ -27,6 +34,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   live: { backgroundColor: 'rgba(239,68,68,0.15)' },
+  upcoming: { backgroundColor: 'rgba(56,189,248,0.12)' },
   ended: { backgroundColor: 'rgba(100,116,139,0.2)' },
   dot: {
     width: 6,
@@ -41,4 +49,5 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   endedText: { color: colors.textDim },
+  upcomingText: { color: colors.blue },
 })

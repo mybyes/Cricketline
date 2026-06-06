@@ -1,0 +1,19 @@
+{
+  "name": "CricketFast — Live Cricket Scores",
+  "short_name": "CricketFast",
+  "description": "Live cricket scores, scorecards and upcoming matches. No login required.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0f1a",
+  "theme_color": "#0a0f1a",
+  "lang": "en",
+  "categories": ["sports", "news"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

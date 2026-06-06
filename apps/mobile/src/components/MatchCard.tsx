@@ -27,7 +27,19 @@ function latestScores(match: Match) {
   return [find(t0 ?? ''), find(t1 ?? '')] as const
 }
 
-export function MatchCard({ match, onPress }: { match: Match; onPress: () => void }) {
+export function MatchCard({
+  match,
+  onPress,
+  isFavorite,
+  onToggleFavorite,
+  showDate,
+}: {
+  match: Match
+  onPress: () => void
+  isFavorite?: boolean
+  onToggleFavorite?: () => void
+  showDate?: boolean
+}) {
   const [s0, s1] = latestScores(match)
   const type = (match.matchType ?? 'match').toUpperCase()
 
@@ -40,7 +52,16 @@ export function MatchCard({ match, onPress }: { match: Match; onPress: () => voi
         <View style={styles.typeChip}>
           <Text style={styles.typeText}>{type}</Text>
         </View>
-        <LiveBadge ended={match.matchEnded} />
+        <View style={styles.topRight}>
+          {onToggleFavorite && (
+            <Pressable onPress={onToggleFavorite} hitSlop={12} style={styles.starBtn}>
+              <Text style={[styles.star, isFavorite && styles.starActive]}>
+                {isFavorite ? '★' : '☆'}
+              </Text>
+            </Pressable>
+          )}
+          <LiveBadge ended={match.matchEnded} started={match.matchStarted} />
+        </View>
       </View>
 
       <View style={styles.teamsRow}>
@@ -49,6 +70,9 @@ export function MatchCard({ match, onPress }: { match: Match; onPress: () => voi
         <TeamBlock name={teamShort(match, 1)} logo={teamLogo(match, 1)} score={s1} align="right" />
       </View>
 
+      {showDate && match.date ? (
+        <Text style={styles.date}>{formatDate(match.date, match.dateTimeGMT)}</Text>
+      ) : null}
       <Text style={styles.status} numberOfLines={2}>{match.status}</Text>
 
       <View style={styles.footer}>
@@ -85,6 +109,15 @@ function TeamBlock({
   )
 }
 
+function formatDate(date: string, gmt?: string) {
+  try {
+    const d = new Date(gmt || date)
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return date
+  }
+}
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
@@ -96,6 +129,11 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  starBtn: { padding: 2 },
+  star: { fontSize: 22, color: colors.textDim },
+  starActive: { color: colors.gold },
+  date: { fontSize: 12, color: colors.blue, marginTop: 10, fontWeight: '600' },
   typeChip: {
     backgroundColor: colors.surfaceRaised,
     paddingHorizontal: 8,
