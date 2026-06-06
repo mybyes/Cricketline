@@ -1,0 +1,25 @@
+{
+  "name": "cricketfast",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:mobile": "pnpm --filter mobile start",
+    "build:backend": "pnpm --filter backend build",
+    "start:backend": "pnpm --filter backend start",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.5.2",
+      "onFail": "download"
+    }
+  },
+  "type": "module"
+}
