@@ -1,76 +1,80 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Constants from 'expo-constants'
+import { AppHeader } from '../components/AppHeader'
 import { getApiUrl } from '../lib/api'
 import { getDeviceId } from '../lib/device'
 import { getNotificationStatus, registerForPushNotifications } from '../lib/notifications'
 import { colors } from '../theme/colors'
 
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0'
+
 export function SettingsScreen() {
+  const [notif, setNotif] = useState('Checking…')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [deviceId, setDeviceId] = useState('')
-  const [notifStatus, setNotifStatus] = useState<string>('checking...')
 
   const refresh = useCallback(async () => {
-    setDeviceId(await getDeviceId())
-    if (Platform.OS === 'web') {
-      setNotifStatus('not available on web')
-    } else {
-      setNotifStatus(await getNotificationStatus())
-    }
-  }, [])
+    setNotif(Platform.OS === 'web' ? 'Available on Android & iOS app' : await getNotificationStatus())
+    if (showAdvanced) setDeviceId(await getDeviceId())
+  }, [showAdvanced])
 
   useEffect(() => { refresh() }, [refresh])
 
-  const enablePush = async () => {
-    const token = await registerForPushNotifications()
-    await refresh()
-    if (token) {
-      Alert.alert('Notifications enabled', 'You will receive alerts for favorite matches.')
-    } else {
-      Alert.alert('Permission denied', 'Enable notifications in your device settings.')
-    }
-  }
-
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
-        <Text style={styles.subtitle}>No login required — open and go</Text>
-      </View>
+      <AppHeader title="Settings" subtitle="No login required" />
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>API</Text>
+        <Text style={styles.label}>ABOUT</Text>
         <View style={styles.card}>
-          <Text style={styles.label}>Backend URL</Text>
-          <Text style={styles.value}>{getApiUrl()}</Text>
+          <Text style={styles.title}>CricketFast</Text>
+          <Text style={styles.val}>Version {APP_VERSION}</Text>
+          <Text style={styles.hint}>Live cricket scores, scorecards and fixtures. Free — no account needed.</Text>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
+        <Text style={styles.label}>SAVED MATCHES</Text>
         <View style={styles.card}>
-          <Text style={styles.label}>Status</Text>
-          <Text style={styles.value}>{notifStatus}</Text>
+          <Text style={styles.val}>Tap ★ on any match to save it here.</Text>
+          <Text style={styles.hint}>Saved on this device and synced in the background — no sign-up.</Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.label}>MATCH ALERTS</Text>
+        <View style={styles.card}>
+          <Text style={styles.val}>{notif}</Text>
+          <Text style={styles.hint}>Register your device for match alerts (delivery coming in a future update).</Text>
           {Platform.OS !== 'web' && (
-            <Pressable style={styles.btn} onPress={enablePush}>
-              <Text style={styles.btnText}>Enable push notifications</Text>
+            <Pressable
+              style={styles.btn}
+              onPress={async () => {
+                await registerForPushNotifications()
+                await refresh()
+                Alert.alert('Done', 'Match alerts updated.')
+              }}
+            >
+              <Text style={styles.btnT}>Enable Match Alerts</Text>
             </Pressable>
           )}
-          <Text style={styles.hint}>
-            Get alerts when your favorite matches start or key events happen.
-          </Text>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Device</Text>
-        <View style={styles.card}>
-          <Text style={styles.label}>Device ID</Text>
-          <Text style={styles.valueSmall}>{deviceId || '...'}</Text>
-          <Text style={styles.hint}>
-            Anonymous device ID — favorites work without an account. No sign-up, no password.
-          </Text>
-        </View>
+        <Pressable onPress={() => setShowAdvanced((v) => !v)}>
+          <Text style={styles.advancedToggle}>{showAdvanced ? '▾ Hide developer info' : '▸ Developer info'}</Text>
+        </Pressable>
+        {showAdvanced && (
+          <View style={[styles.card, { marginTop: 8 }]}>
+            <Text style={styles.advLabel}>API</Text>
+            <Text style={styles.mono}>{getApiUrl()}</Text>
+            <Text style={[styles.advLabel, { marginTop: 12 }]}>Device ID</Text>
+            <Text style={styles.mono}>{deviceId || '…'}</Text>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   )
@@ -78,42 +82,15 @@ export function SettingsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: { fontSize: 22, fontWeight: '800', color: colors.text },
-  subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
-  section: { paddingHorizontal: 16, marginTop: 20 },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textDim,
-    letterSpacing: 1,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  label: { fontSize: 12, color: colors.textDim, marginBottom: 4 },
-  value: { fontSize: 14, color: colors.text, fontWeight: '500' },
-  valueSmall: { fontSize: 12, color: colors.textMuted, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  hint: { fontSize: 12, color: colors.textDim, marginTop: 10, lineHeight: 18 },
-  btn: {
-    marginTop: 12,
-    backgroundColor: colors.accentDim,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  btnText: { color: colors.accent, fontWeight: '700', fontSize: 14 },
+  section: { marginTop: 16, paddingHorizontal: 12 },
+  label: { fontSize: 11, fontWeight: '800', color: colors.textDim, letterSpacing: 1, marginBottom: 6, marginLeft: 4 },
+  card: { backgroundColor: colors.card, borderRadius: 6, padding: 16, borderWidth: 1, borderColor: colors.border },
+  title: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: 4 },
+  val: { fontSize: 13, color: colors.text, lineHeight: 20 },
+  hint: { fontSize: 12, color: colors.textDim, marginTop: 8, lineHeight: 18 },
+  btn: { marginTop: 12, backgroundColor: colors.header, paddingVertical: 12, borderRadius: 6, alignItems: 'center' },
+  btnT: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  advancedToggle: { fontSize: 12, color: colors.textDim, marginLeft: 4 },
+  advLabel: { fontSize: 10, fontWeight: '700', color: colors.textDim, letterSpacing: 0.5, marginBottom: 4 },
+  mono: { fontSize: 11, color: colors.textMuted, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
 })

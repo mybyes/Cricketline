@@ -1,21 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { getLiveMatches, getUpcomingMatches } from '../services/cricapi'
-import { cached, CACHE_KEYS, LIVE_MATCHES_TTL, SCHEDULE_TTL } from '../services/cache'
-
-async function withStaleFallback<T>(
-  redis: FastifyInstance['redis'],
-  key: string,
-  fetch: () => Promise<T>
-): Promise<{ data: T; stale?: boolean }> {
-  try {
-    const data = await fetch()
-    return { data }
-  } catch (e) {
-    const hit = await redis.get(key)
-    if (hit) return { data: JSON.parse(hit) as T, stale: true }
-    throw e
-  }
-}
+import { cached, CACHE_KEYS, LIVE_MATCHES_TTL, SCHEDULE_TTL, withStaleFallback } from '../services/cache'
 
 export default async function matchesRoute(app: FastifyInstance) {
   app.get('/matches/live', async (req, reply) => {

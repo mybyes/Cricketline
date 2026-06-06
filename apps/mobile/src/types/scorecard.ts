@@ -21,7 +21,7 @@ export interface InningScorecard {
   inning: string
   batting: BatsmanRow[]
   bowling: BowlerRow[]
-  extras?: { t: number; b: number; lb: number; w: number; nb: number; p: number }
+  extras?: { t: number; b?: number; lb?: number; w?: number; nb?: number; p?: number }
   totals?: { r: number; w: number; o: number }
 }
 

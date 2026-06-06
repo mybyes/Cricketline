@@ -25,8 +25,8 @@
       "name": "CricketFast — Live Cricket Scores",
       "shortName": "CricketFast",
       "description": "Live cricket scores, scorecards and upcoming matches. No login required.",
-      "themeColor": "#0a0f1a",
-      "backgroundColor": "#0a0f1a",
+      "themeColor": "#1b5e20",
+      "backgroundColor": "#f0f2f0",
       "display": "standalone",
       "lang": "en",
       "bundler": "metro"

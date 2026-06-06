@@ -9,10 +9,10 @@ const theme = {
   colors: {
     ...DefaultTheme.colors,
     background: colors.bg,
-    card: colors.surface,
+    card: colors.card,
     text: colors.text,
     border: colors.border,
-    primary: colors.accent,
+    primary: colors.header,
   },
 }
 

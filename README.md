@@ -6,11 +6,12 @@ Real-time cricket app built as a monorepo: Fastify API on Railway, Expo mobile a
 
 ## Features
 
-- **Live scores** — auto-refresh every 10 seconds
+- **Live scores** — auto-refresh every 30s (list) / 12s (scoreboard)
+- **Live line** — ball-by-ball status, batters on crease, bowler info
 - **Full scorecards** — batting & bowling tables, tap any match
 - **Upcoming matches** — scheduled fixtures with dates
 - **Favorites** — save matches with ★ (no account needed)
-- **Push notifications** — optional, device-based (no auth)
+- **Push notifications** — device registration (delivery coming soon)
 - **Works everywhere** — browser, iOS, Android via Expo
 
 ## Stack
@@ -22,7 +23,7 @@ Real-time cricket app built as a monorepo: Fastify API on Railway, Expo mobile a
 | Database | PostgreSQL (optional — Supabase free tier) |
 | Mobile | Expo 56, React Native, React Navigation |
 | API data | CricAPI |
-| Hosting | Railway |
+| Hosting | Railway (API), Vercel (web) |
 
 ## Quick start
 
@@ -37,6 +38,7 @@ pnpm dev:mobile
 ```
 
 Set `apps/mobile/.env`:
+
 ```
 EXPO_PUBLIC_API_URL=https://your-backend.up.railway.app
 ```
@@ -56,9 +58,33 @@ EXPO_PUBLIC_API_URL=https://your-backend.up.railway.app
 
 ## Deploy
 
-**Backend:** Railway (Dockerfile) — set `CRICAPI_KEY`, `UPSTASH_REDIS_URL`
+### Backend (Railway)
 
-**Mobile:** Expo Go for dev, `eas build` for production APK/IPA. Not deployed to Railway.
+Set `CRICAPI_KEY`, `UPSTASH_REDIS_URL`. Optional `DATABASE_URL` for Postgres — if unreachable, API falls back to Redis.
+
+### Web (Vercel)
+
+1. Import repo on [vercel.com](https://vercel.com)
+2. Set **Root Directory** → `apps/mobile`
+3. Environment variables:
+
+```
+EXPO_PUBLIC_API_URL=https://your-backend.up.railway.app
+EXPO_PUBLIC_SITE_URL=https://your-app.vercel.app
+```
+
+4. Deploy — runs `pnpm build:web` automatically
+5. Submit sitemap in Google Search Console: `https://your-domain/sitemap.xml`
+
+Build locally:
+
+```bash
+pnpm build:web
+```
+
+### Mobile (EAS)
+
+Expo Go for dev, `eas build` for production APK/IPA. Not deployed to Railway.
 
 ## Auth
 

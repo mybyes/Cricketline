@@ -29,4 +29,5 @@ export interface LiveMatchesResponse {
   success: boolean
   data: Match[]
   error?: string
+  stale?: boolean
 }

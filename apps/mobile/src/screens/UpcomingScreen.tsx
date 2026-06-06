@@ -8,11 +8,11 @@ export function UpcomingScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <MatchList
-        title="Upcoming"
-        subtitle="Scheduled matches"
-        emptyText="No upcoming matches scheduled"
+        headerTitle="Fixtures"
+        headerSubtitle="Upcoming matches"
+        emptyText="No upcoming matches"
         fetcher={fetchUpcomingMatches}
-        pollMs={60_000}
+        pollMs={120_000}
         showDate
       />
     </SafeAreaView>

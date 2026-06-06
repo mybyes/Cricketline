@@ -1,172 +1,106 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { Match } from '../types/match'
 import { colors } from '../theme/colors'
+import { formatDate, formatScore, seriesName, teamLogo, teamScores, teamShort } from '../theme/matchUtils'
 import { LiveBadge } from './LiveBadge'
 
-function teamShort(match: Match, index: number) {
-  return match.teamInfo?.[index]?.shortname ?? match.teams[index]?.slice(0, 3).toUpperCase() ?? '—'
-}
-
-function teamLogo(match: Match, index: number) {
-  return match.teamInfo?.[index]?.img
-}
-
-function latestScores(match: Match) {
-  if (!match.score?.length) return [null, null] as const
-  const byTeam = new Map<string, { r: number; w: number; o: number }>()
-  for (const s of match.score) {
-    const team = s.inning.split(' ')[0].toLowerCase()
-    byTeam.set(team, { r: s.r, w: s.w, o: s.o })
-  }
-  const t0 = match.teams[0]?.toLowerCase()
-  const t1 = match.teams[1]?.toLowerCase()
-  const find = (name: string) => {
-    for (const [k, v] of byTeam) if (k.includes(name) || name.includes(k)) return v
-    return null
-  }
-  return [find(t0 ?? ''), find(t1 ?? '')] as const
-}
-
 export function MatchCard({
-  match,
-  onPress,
-  isFavorite,
-  onToggleFavorite,
-  showDate,
+  match, onPress, isFavorite, onToggleFavorite, showDate, updatedAgo,
 }: {
-  match: Match
-  onPress: () => void
-  isFavorite?: boolean
-  onToggleFavorite?: () => void
-  showDate?: boolean
+  match: Match; onPress: () => void; isFavorite?: boolean
+  onToggleFavorite?: () => void; showDate?: boolean; updatedAgo?: number
 }) {
-  const [s0, s1] = latestScores(match)
-  const type = (match.matchType ?? 'match').toUpperCase()
+  const [s0, s1] = teamScores(match)
+  const series = seriesName(match)
+  const isLive = match.matchStarted && !match.matchEnded
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-    >
-      <View style={styles.topRow}>
-        <View style={styles.typeChip}>
-          <Text style={styles.typeText}>{type}</Text>
-        </View>
-        <View style={styles.topRight}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+      <View style={styles.seriesRow}>
+        <Text style={styles.series} numberOfLines={1}>{series}</Text>
+        <View style={styles.seriesRight}>
           {onToggleFavorite && (
-            <Pressable onPress={onToggleFavorite} hitSlop={12} style={styles.starBtn}>
-              <Text style={[styles.star, isFavorite && styles.starActive]}>
-                {isFavorite ? '★' : '☆'}
-              </Text>
+            <Pressable onPress={(e) => { e.stopPropagation(); onToggleFavorite() }} hitSlop={10}>
+              <Text style={[styles.star, isFavorite && styles.starOn]}>{isFavorite ? '★' : '☆'}</Text>
             </Pressable>
           )}
           <LiveBadge ended={match.matchEnded} started={match.matchStarted} />
         </View>
       </View>
 
-      <View style={styles.teamsRow}>
-        <TeamBlock name={teamShort(match, 0)} logo={teamLogo(match, 0)} score={s0} />
-        <Text style={styles.vs}>vs</Text>
-        <TeamBlock name={teamShort(match, 1)} logo={teamLogo(match, 1)} score={s1} align="right" />
+      <View style={styles.scoreRow}>
+        <TeamLine name={teamShort(match, 0)} fullName={match.teams[0]} logo={teamLogo(match, 0)} score={formatScore(s0)} batting={isLive && !!s0} />
+        <View style={styles.divider} />
+        <TeamLine name={teamShort(match, 1)} fullName={match.teams[1]} logo={teamLogo(match, 1)} score={formatScore(s1)} batting={isLive && !!s1} alignRight />
       </View>
 
-      {showDate && match.date ? (
-        <Text style={styles.date}>{formatDate(match.date, match.dateTimeGMT)}</Text>
-      ) : null}
-      <Text style={styles.status} numberOfLines={2}>{match.status}</Text>
+      {showDate && match.date ? <Text style={styles.date}>{formatDate(match.date, match.dateTimeGMT)}</Text> : null}
+
+      {/* Live line status strip */}
+      <View style={[styles.statusBar, isLive && styles.statusBarLive]}>
+        <Text style={[styles.status, isLive && styles.statusLive]} numberOfLines={2}>
+          {isLive ? '● ' : ''}{match.status}
+        </Text>
+      </View>
 
       <View style={styles.footer}>
         <Text style={styles.venue} numberOfLines={1}>{match.venue}</Text>
-        <Text style={styles.chevron}>›</Text>
+        {updatedAgo != null && isLive && (
+          <Text style={styles.updated}>{updatedAgo < 5 ? 'just now' : `${updatedAgo}s ago`}</Text>
+        )}
       </View>
     </Pressable>
   )
 }
 
-function TeamBlock({
-  name,
-  logo,
-  score,
-  align = 'left',
-}: {
-  name: string
-  logo?: string
-  score: { r: number; w: number; o: number } | null
-  align?: 'left' | 'right'
+function TeamLine({ name, fullName, logo, score, batting, alignRight }: {
+  name: string; fullName?: string; logo?: string; score: string | null; batting?: boolean; alignRight?: boolean
 }) {
   return (
-    <View style={[styles.team, align === 'right' && styles.teamRight]}>
-      {logo ? <Image source={{ uri: logo }} style={styles.logo} /> : <View style={styles.logoPlaceholder} />}
-      <Text style={styles.teamName}>{name}</Text>
-      {score ? (
-        <Text style={styles.teamScore}>
-          {score.r}/{score.w} <Text style={styles.overs}>({score.o})</Text>
-        </Text>
-      ) : (
-        <Text style={styles.yetToBat}>—</Text>
-      )}
+    <View style={[styles.teamLine, alignRight && styles.teamLineRight]}>
+      <View style={[styles.teamTop, alignRight && styles.teamTopRight]}>
+        {logo ? <Image source={{ uri: logo }} style={styles.logo} /> : <View style={styles.logoPh} />}
+        <View style={alignRight ? styles.teamTextRight : undefined}>
+          <Text style={styles.shortName}>{name}</Text>
+          <Text style={styles.fullName} numberOfLines={1}>{fullName}</Text>
+        </View>
+      </View>
+      <Text style={[styles.scoreText, batting && styles.scoreBatting]}>{score ?? 'Yet to bat'}</Text>
     </View>
   )
 }
 
-function formatDate(date: string, gmt?: string) {
-  try {
-    const d = new Date(gmt || date)
-    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return date
-  }
-}
-
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.card, marginHorizontal: 12, marginBottom: 10, borderRadius: 6,
+    overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08, shadowRadius: 3,
   },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  starBtn: { padding: 2 },
-  star: { fontSize: 22, color: colors.textDim },
-  starActive: { color: colors.gold },
-  date: { fontSize: 12, color: colors.blue, marginTop: 10, fontWeight: '600' },
-  typeChip: {
-    backgroundColor: colors.surfaceRaised,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  typeText: { fontSize: 10, fontWeight: '700', color: colors.blue, letterSpacing: 0.5 },
-  teamsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  team: { flex: 1, alignItems: 'flex-start' },
-  teamRight: { alignItems: 'flex-end' },
-  logo: { width: 36, height: 36, borderRadius: 18, marginBottom: 6 },
-  logoPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceRaised,
-    marginBottom: 6,
-  },
-  teamName: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
-  teamScore: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: 2 },
-  overs: { fontSize: 14, fontWeight: '500', color: colors.textMuted },
-  yetToBat: { fontSize: 18, color: colors.textDim, marginTop: 4 },
-  vs: { fontSize: 12, color: colors.textDim, fontWeight: '600', marginHorizontal: 8 },
-  status: { fontSize: 13, color: colors.gold, marginTop: 14, lineHeight: 18 },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  venue: { flex: 1, fontSize: 12, color: colors.textDim },
-  chevron: { fontSize: 22, color: colors.accent, fontWeight: '300', marginLeft: 8 },
+  pressed: { opacity: 0.92 },
+  seriesRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingTop: 10, paddingBottom: 6 },
+  series: { flex: 1, fontSize: 11, fontWeight: '600', color: colors.textMuted, marginRight: 8 },
+  seriesRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  star: { fontSize: 18, color: colors.textDim },
+  starOn: { color: colors.gold },
+  scoreRow: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 8 },
+  divider: { width: 1, backgroundColor: colors.border, marginHorizontal: 8 },
+  teamLine: { flex: 1 },
+  teamLineRight: { alignItems: 'flex-end' },
+  teamTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  teamTopRight: { flexDirection: 'row-reverse' },
+  teamTextRight: { alignItems: 'flex-end' },
+  logo: { width: 28, height: 28, borderRadius: 14 },
+  logoPh: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceAlt },
+  shortName: { fontSize: 15, fontWeight: '800', color: colors.text },
+  fullName: { fontSize: 10, color: colors.textDim, maxWidth: 120 },
+  scoreText: { fontSize: 16, fontWeight: '700', color: colors.textMuted },
+  scoreBatting: { color: colors.scoreLive, fontSize: 17 },
+  date: { fontSize: 11, color: colors.blue, paddingHorizontal: 12, paddingBottom: 4, fontWeight: '600' },
+  statusBar: { backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border },
+  statusBarLive: { backgroundColor: colors.lineBg },
+  status: { fontSize: 12, fontWeight: '600', color: colors.score, lineHeight: 17 },
+  statusLive: { color: colors.lineStatus, fontWeight: '700' },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 10, paddingTop: 4 },
+  venue: { flex: 1, fontSize: 10, color: colors.textDim },
+  updated: { fontSize: 9, color: colors.textDim, fontWeight: '600' },
 })
