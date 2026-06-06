@@ -3,7 +3,7 @@ packages:
 allowBuilds:
   esbuild: true
   msgpackr-extract: true
-  sharp: set this to true or false
+  sharp: true
 minimumReleaseAgeExclude:
   - '@expo/cli@56.1.14'
   - '@expo/fingerprint@0.19.4'
