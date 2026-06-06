@@ -9,8 +9,9 @@ export function getApiUrl() {
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, init)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`)
+  return body as T
 }
 
 export async function fetchLiveMatches(): Promise<LiveMatchesResponse> {

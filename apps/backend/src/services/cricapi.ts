@@ -3,26 +3,44 @@ import axios from 'axios'
 const BASE = 'https://api.cricapi.com/v1'
 const KEY  = process.env.CRICAPI_KEY!
 
-export async function getLiveMatches() {
-  const { data } = await axios.get(`${BASE}/currentMatches`, {
-    params: { apikey: KEY, offset: 0 }
+function checkResponse(data: { status?: string; reason?: string; message?: string }) {
+  if (data.status !== 'success') {
+    throw new Error(data.reason ?? data.message ?? 'CricAPI error')
+  }
+}
+
+async function fetchAllMatches() {
+  const { data } = await axios.get(`${BASE}/matches`, {
+    params: { apikey: KEY, offset: 0 },
   })
-  if (data.status !== 'success') throw new Error('CricAPI error')
+  checkResponse(data)
   return data.data as Match[]
 }
 
+export async function getLiveMatches() {
+  try {
+    const { data } = await axios.get(`${BASE}/currentMatches`, {
+      params: { apikey: KEY, offset: 0 },
+    })
+    if (data.status === 'success') return data.data as Match[]
+  } catch {
+    // currentMatches can fail on free tier — fall back to /matches
+  }
+
+  const all = await fetchAllMatches()
+  return all.filter((m) => m.matchStarted && !m.matchEnded)
+}
+
 export async function getUpcomingMatches() {
-  const { data } = await axios.get(`${BASE}/matches`, {
-    params: { apikey: KEY, offset: 0 }
-  })
-  if (data.status !== 'success') throw new Error('CricAPI error')
-  return (data.data as Match[]).filter((m) => !m.matchStarted && !m.matchEnded)
+  const all = await fetchAllMatches()
+  return all.filter((m) => !m.matchStarted && !m.matchEnded)
 }
 
 export async function getMatchScore(matchId: string) {
   const { data } = await axios.get(`${BASE}/match_scorecard`, {
-    params: { apikey: KEY, id: matchId }
+    params: { apikey: KEY, id: matchId },
   })
+  checkResponse(data)
   return data.data
 }
 
