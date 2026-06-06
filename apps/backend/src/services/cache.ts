@@ -1,10 +1,11 @@
 import { Redis } from 'ioredis'
 import type { FastifyInstance } from 'fastify'
 
-const LIVE_MATCHES_TTL = 10
-const SCORECARD_TTL    = 8
-const SCHEDULE_TTL     = 300
-const RECENT_TTL       = 120
+const LIVE_MATCHES_TTL = 30
+const SCORECARD_TTL    = 12
+const SCHEDULE_TTL     = 600
+const RECENT_TTL       = 600
+const BACKUP_TTL       = 21_600 // 6h — survive CricAPI rate limits
 const SQUAD_TTL        = 600
 const BBB_TTL          = 12
 const HISTORY_TTL      = 300
@@ -21,8 +22,15 @@ export async function cached<T>(
   if (hit) return JSON.parse(hit) as T
 
   const fresh = await fetcher()
-  await redis.setex(key, ttl, JSON.stringify(fresh))
+  const json = JSON.stringify(fresh)
+  await redis.setex(key, ttl, json)
+  await redis.setex(`${key}:backup`, BACKUP_TTL, json)
   return fresh
+}
+
+async function readCache<T>(redis: Redis, key: string): Promise<T | null> {
+  const hit = await redis.get(key) ?? await redis.get(`${key}:backup`)
+  return hit ? (JSON.parse(hit) as T) : null
 }
 
 export const CACHE_KEYS = {
@@ -46,8 +54,8 @@ export async function withStaleFallback<T>(
     const data = await fetch()
     return { data }
   } catch (e) {
-    const hit = await redis.get(key)
-    if (hit) return { data: JSON.parse(hit) as T, stale: true }
+    const hit = await readCache<T>(redis, key)
+    if (hit) return { data: hit, stale: true }
     throw e
   }
 }
