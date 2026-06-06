@@ -12,7 +12,7 @@ export function HomeScreen() {
         headerSubtitle="Live cricket line"
         emptyText="No live matches right now"
         fetcher={fetchLiveMatches}
-        pollMs={30_000}
+        pollMs={15_000}
       />
     </SafeAreaView>
   )

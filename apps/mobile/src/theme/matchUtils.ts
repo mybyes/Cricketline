@@ -7,6 +7,14 @@ export function seriesName(match: Match) {
   return match.matchType?.toUpperCase() ?? 'Cricket'
 }
 
+export function formatType(match: Match) {
+  const t = match.matchType?.toLowerCase() ?? ''
+  if (t.includes('test')) return 'TEST'
+  if (t.includes('odi')) return 'ODI'
+  if (t.includes('t20')) return 'T20'
+  return (match.matchType ?? 'MATCH').toUpperCase()
+}
+
 export function teamShort(match: Match, index: number) {
   return match.teamInfo?.[index]?.shortname ?? match.teams[index]?.slice(0, 3).toUpperCase() ?? '—'
 }
@@ -29,6 +37,10 @@ export function teamScores(match: Match) {
   return [find(match.teams[0]?.toLowerCase() ?? ''), find(match.teams[1]?.toLowerCase() ?? '')] as const
 }
 
+export function allInningsScores(match: Match) {
+  return match.score ?? []
+}
+
 export function formatScore(s: { r: number; w: number; o: number } | null) {
   if (!s) return null
   return `${s.r}-${s.w} (${s.o})`
@@ -42,5 +54,20 @@ export function formatDate(date: string, gmt?: string) {
     })
   } catch {
     return date
+  }
+}
+
+/** Safe strike rate — avoids crash when sr is NaN (0 balls faced) */
+export function formatSr(sr?: number, balls?: number) {
+  if (!balls || !sr || !Number.isFinite(sr)) return '—'
+  return sr.toFixed(balls >= 100 ? 0 : 1)
+}
+
+export function formatTimeShort(gmt?: string) {
+  if (!gmt) return ''
+  try {
+    return new Date(gmt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return ''
   }
 }

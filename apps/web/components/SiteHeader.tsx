@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { AppDownloadButton } from './AppDownloadButton'
 
 export function SiteHeader() {
   return (
@@ -17,9 +18,8 @@ export function SiteHeader() {
           <Link href="/">Live</Link>
           <Link href="/#fixtures">Fixtures</Link>
           <Link href="/#series">Series</Link>
-          <Link href="/#rankings">Rankings</Link>
         </nav>
-        <a className="app-cta" href="#download">Get App</a>
+        <AppDownloadButton className="app-cta" label="Get App" comingSoonLabel="Get App" />
       </div>
     </header>
   )

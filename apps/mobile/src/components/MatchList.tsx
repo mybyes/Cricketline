@@ -107,7 +107,7 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
               onPress={() => navigation.navigate('Scoreboard', {
                 matchId: item.id,
                 matchName: item.teams.join(' vs '),
-                seriesId: (item as { series_id?: string }).series_id,
+                seriesId: item.series_id,
                 matchType: item.matchType,
               })}
             />

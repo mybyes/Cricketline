@@ -47,7 +47,7 @@ export function SettingsScreen() {
         <Text style={styles.label}>MATCH ALERTS</Text>
         <View style={styles.card}>
           <Text style={styles.val}>{notif}</Text>
-          <Text style={styles.hint}>Register your device for match alerts (delivery coming in a future update).</Text>
+          <Text style={styles.hint}>Save a match with ★ and enable alerts — you&apos;ll get a push when a wicket falls.</Text>
           {Platform.OS !== 'web' && (
             <Pressable
               style={styles.btn}

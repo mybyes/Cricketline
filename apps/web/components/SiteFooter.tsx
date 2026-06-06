@@ -1,3 +1,5 @@
+import { AppDownloadButton } from './AppDownloadButton'
+
 export function SiteFooter() {
   return (
     <footer className="site-footer">
@@ -12,7 +14,8 @@ export function SiteFooter() {
         </div>
         <div>
           <strong>Get the App</strong>
-          <p>Android &amp; iOS — live line, session, squad, history, table</p>
+          <p>Live line, session, squad, history, table — 8 match tabs</p>
+          <AppDownloadButton />
         </div>
       </div>
       <div className="container footer-copy">

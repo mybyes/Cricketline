@@ -17,7 +17,7 @@ import type { BbbBall } from '../types/extras'
 import type { RootStackParamList } from '../types/match'
 import type { InningScorecard, ScorecardData } from '../types/scorecard'
 import { colors } from '../theme/colors'
-import { formatScore } from '../theme/matchUtils'
+import { formatScore, formatSr } from '../theme/matchUtils'
 
 type Route = RouteProp<RootStackParamList, 'Scoreboard'>
 type Tab = 'line' | 'session' | 'rates' | 'scorecard' | 'history' | 'squad' | 'table' | 'info'
@@ -33,15 +33,24 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'info', label: 'Info' },
 ]
 
+const TAB_FADE_STEPS = [0.04, 0.12, 0.28, 0.5, 0.78, 0.95]
+
 function TabBar({ active, onChange }: { active: Tab; onChange: (k: Tab) => void }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
-      {TABS.map((t) => (
-        <Pressable key={t.key} onPress={() => onChange(t.key)} style={[styles.tabBtn, active === t.key && styles.tabBtnActive]}>
-          <Text style={[styles.tabText, active === t.key && styles.tabTextActive]}>{t.label}</Text>
-        </Pressable>
-      ))}
-    </ScrollView>
+    <View style={styles.tabBarWrap}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={styles.tabBarContent}>
+        {TABS.map((t) => (
+          <Pressable key={t.key} onPress={() => onChange(t.key)} style={[styles.tabBtn, active === t.key && styles.tabBtnActive]}>
+            <Text style={[styles.tabText, active === t.key && styles.tabTextActive]}>{t.label}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+      <View pointerEvents="none" style={styles.tabFade}>
+        {TAB_FADE_STEPS.map((opacity, i) => (
+          <View key={i} style={[styles.tabFadeStep, { opacity, backgroundColor: colors.card }]} />
+        ))}
+      </View>
+    </View>
   )
 }
 
@@ -65,7 +74,7 @@ function BattingTable({ inning }: { inning: InningScorecard }) {
             <Text style={styles.td}>{row.b}</Text>
             <Text style={styles.td}>{row['4s']}</Text>
             <Text style={styles.td}>{row['6s']}</Text>
-            <Text style={styles.td}>{row.sr.toFixed(1)}</Text>
+            <Text style={styles.td}>{formatSr(row.sr, row.b)}</Text>
           </View>
         )
       })}
@@ -126,7 +135,7 @@ function ScoreHero({ data }: { data: ScorecardData }) {
 
 export function ScoreboardScreen() {
   const navigation = useNavigation()
-  const { matchId, matchName, seriesId } = useRoute<Route>().params
+  const { matchId, matchName, seriesId, matchType } = useRoute<Route>().params
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -175,7 +184,10 @@ export function ScoreboardScreen() {
       <SafeAreaView edges={['top']} style={styles.safeTop}>
         <View style={styles.nav}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}><Text style={styles.backText}>← Back</Text></Pressable>
-          <LiveBadge ended={data?.matchEnded} started={data?.matchStarted} />
+          <View style={styles.navRight}>
+            <View style={styles.fmtPill}><Text style={styles.fmtPillText}>{data?.matchType?.toUpperCase() ?? matchType?.toUpperCase() ?? 'MATCH'}</Text></View>
+            <LiveBadge ended={data?.matchEnded} started={data?.matchStarted} />
+          </View>
         </View>
         <Text style={styles.matchTitle} numberOfLines={2}>{matchName}</Text>
       </SafeAreaView>
@@ -246,6 +258,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   safeTop: { backgroundColor: colors.header },
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 4 },
+  navRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fmtPill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
+  fmtPillText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   backBtn: { paddingVertical: 4 },
   backText: { fontSize: 16, color: '#fff', fontWeight: '600' },
   matchTitle: { fontSize: 15, fontWeight: '700', color: '#fff', paddingHorizontal: 16, paddingBottom: 12 },
@@ -254,7 +269,11 @@ const styles = StyleSheet.create({
   heroTeamName: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   heroScore: { fontSize: 26, fontWeight: '900', color: colors.score, marginTop: 4 },
   heroVs: { fontSize: 14, color: colors.textDim, fontWeight: '600', marginHorizontal: 12 },
-  tabBar: { backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
+  tabBarWrap: { position: 'relative', backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
+  tabBar: { backgroundColor: colors.card },
+  tabBarContent: { paddingRight: 28 },
+  tabFade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 32, flexDirection: 'row' },
+  tabFadeStep: { flex: 1 },
   tabBtn: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: 'transparent' },
   tabBtnActive: { borderBottomColor: colors.header },
   tabText: { fontSize: 12, fontWeight: '600', color: colors.textDim },

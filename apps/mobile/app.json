@@ -1,24 +1,33 @@
 {
   "expo": {
-    "name": "CricketFast",
+    "name": "CricketFast Live Line",
     "slug": "cricketfast",
     "owner": "mybyess-team",
     "version": "1.0.0",
-    "description": "Live cricket scores, ball-by-ball scorecards and upcoming fixtures. Free, fast — no login required.",
+    "description": "Live cricket line — scores, session, squad, history & points table. Free, no login.",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1b5e20"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cricketfast.live"
     },
     "android": {
+      "package": "com.cricketfast.live",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1b5e20",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true,
+      "permissions": ["INTERNET", "RECEIVE_BOOT_COMPLETED", "VIBRATE"]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -35,7 +44,8 @@
       [
         "expo-notifications",
         {
-          "color": "#22c55e"
+          "color": "#1b5e20",
+          "icon": "./assets/icon.png"
         }
       ]
     ],

@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import rateLimit from '@fastify/rate-limit'
 import { Redis } from 'ioredis'
 import { initDb } from './db'
 import matchesRoute from './routes/matches'
@@ -9,7 +10,8 @@ import matchExtrasRoute from './routes/matchExtras'
 import seriesRoute from './routes/series'
 import favoritesRoute from './routes/favorites'
 import devicesRoute from './routes/devices'
-import { initStoreRedis } from './services/store'
+import { initStoreRedis, rebuildMatchFanIndex } from './services/store'
+import { startWicketWatcher } from './services/wicketWatcher'
 
 const redisUrl = process.env.UPSTASH_REDIS_URL
 const cricApiKey = process.env.CRICAPI_KEY
@@ -31,15 +33,19 @@ initStoreRedis(redis)
 
 async function start() {
   const dbReady = await initDb()
+  await rebuildMatchFanIndex()
   app.log.info(dbReady ? 'PostgreSQL connected' : 'Using Redis for favorites (set DATABASE_URL for Postgres)')
 
-  app.register(cors, { origin: '*' })
+  await app.register(cors, { origin: '*' })
+  await app.register(rateLimit, { max: 10, timeWindow: '1 minute' })
   app.register(matchesRoute)
   app.register(scoreRoute)
   app.register(matchExtrasRoute)
   app.register(seriesRoute)
   app.register(favoritesRoute)
   app.register(devicesRoute)
+
+  startWicketWatcher(redis, app.log)
 
   app.get('/health', async () => ({
     status: 'ok',

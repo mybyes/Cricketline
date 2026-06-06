@@ -38,7 +38,7 @@ export default async function matchExtrasRoute(app: FastifyInstance) {
     const key = CACHE_KEYS.history(id)
     try {
       const { data, stale } = await withStaleFallback(app.redis, key, () =>
-        cached(app.redis, key, HISTORY_TTL, () => getMatchHistory(id))
+        cached(app.redis, key, HISTORY_TTL, () => getMatchHistory(id, app.redis))
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {

@@ -63,9 +63,24 @@ export async function savePushToken(deviceId: string, pushToken: string, platfor
   await savePushTokenRedis(deviceId, pushToken, platform)
 }
 
+export async function getPushTokensForMatch(matchId: string): Promise<string[]> {
+  const db = getDb()
+  if (db) {
+    const rows = await db`
+      SELECT DISTINCT d.push_token
+      FROM favorites f
+      INNER JOIN device_tokens d ON f.device_id = d.device_id
+      WHERE f.match_id = ${matchId}
+    `
+    return rows.map((r) => r.push_token as string)
+  }
+  return getPushTokensForMatchRedis(matchId)
+}
+
 // Redis fallback when DATABASE_URL is not set
 const favKey = (id: string) => `favorites:${id}`
 const tokenKey = (id: string) => `device:${id}`
+const fanKey = (matchId: string) => `matchFans:${matchId}`
 
 async function listFavoritesRedis(deviceId: string): Promise<FavoriteRecord[]> {
   const redis = getRedis()
@@ -79,12 +94,28 @@ async function addFavoriteRedis(deviceId: string, fav: FavoriteRecord) {
   const list = await listFavoritesRedis(deviceId)
   const next = [fav, ...list.filter((f) => f.match_id !== fav.match_id)]
   await redis.set(favKey(deviceId), JSON.stringify(next))
+  await redis.sadd(fanKey(fav.match_id), deviceId)
 }
 
 async function removeFavoriteRedis(deviceId: string, matchId: string) {
   const redis = getRedis()
   const list = await listFavoritesRedis(deviceId)
+  const had = list.some((f) => f.match_id === matchId)
   await redis.set(favKey(deviceId), JSON.stringify(list.filter((f) => f.match_id !== matchId)))
+  if (had) await redis.srem(fanKey(matchId), deviceId)
+}
+
+async function getPushTokensForMatchRedis(matchId: string): Promise<string[]> {
+  const redis = getRedis()
+  const deviceIds = await redis.smembers(fanKey(matchId))
+  const tokens: string[] = []
+  for (const id of deviceIds) {
+    const raw = await redis.get(tokenKey(id))
+    if (!raw) continue
+    const parsed = JSON.parse(raw) as { push_token?: string }
+    if (parsed.push_token) tokens.push(parsed.push_token)
+  }
+  return tokens
 }
 
 async function savePushTokenRedis(deviceId: string, pushToken: string, platform?: string) {
@@ -100,4 +131,20 @@ function getRedis() {
 
 export function initStoreRedis(redis: Redis) {
   _redis = redis
+}
+
+/** Rebuild matchFans index from existing Redis favorites (no-op when using Postgres). */
+export async function rebuildMatchFanIndex() {
+  if (getDb()) return
+  const redis = getRedis()
+  const keys = await redis.keys('favorites:*')
+  for (const key of keys) {
+    const deviceId = key.slice('favorites:'.length)
+    const raw = await redis.get(key)
+    if (!raw) continue
+    const list = JSON.parse(raw) as FavoriteRecord[]
+    for (const fav of list) {
+      await redis.sadd(fanKey(fav.match_id), deviceId)
+    }
+  }
 }

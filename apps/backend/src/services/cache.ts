@@ -1,7 +1,7 @@
 import { Redis } from 'ioredis'
 import type { FastifyInstance } from 'fastify'
 
-const LIVE_MATCHES_TTL = 30
+const LIVE_MATCHES_TTL = 15
 const SCORECARD_TTL    = 12
 const SCHEDULE_TTL     = 600
 const RECENT_TTL       = 600
@@ -11,6 +11,7 @@ const BBB_TTL          = 12
 const HISTORY_TTL      = 300
 const SERIES_LIST_TTL  = 600
 const SERIES_TABLE_TTL = 300
+const ALL_MATCHES_TTL  = 300
 
 export async function cached<T>(
   redis: Redis,
@@ -41,6 +42,7 @@ export const CACHE_KEYS = {
   bbb:          (id: string) => `bbb:${id}`,
   history:      (id: string) => `history:${id}`,
   schedule:     () => 'matches:schedule',
+  allMatches:   () => 'matches:all',
   seriesList:   () => 'series:list',
   seriesTable:  (id: string) => `series:table:${id}`,
 }
@@ -62,5 +64,5 @@ export async function withStaleFallback<T>(
 
 export {
   LIVE_MATCHES_TTL, SCORECARD_TTL, SCHEDULE_TTL, RECENT_TTL,
-  SQUAD_TTL, BBB_TTL, HISTORY_TTL, SERIES_LIST_TTL, SERIES_TABLE_TTL,
+  SQUAD_TTL, BBB_TTL, HISTORY_TTL, SERIES_LIST_TTL, SERIES_TABLE_TTL, ALL_MATCHES_TTL,
 }
