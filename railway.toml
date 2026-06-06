@@ -1,8 +1,11 @@
+# Backend-only. Mobile (apps/mobile) runs locally via Expo Go — do NOT add a second Railway service for it.
+
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "apps/backend/Dockerfile"
 
 [deploy]
+# Leave start command empty in the Railway dashboard — Dockerfile CMD runs the server.
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"

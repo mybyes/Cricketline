@@ -1,6 +1,7 @@
 export interface Match {
   id: string
   name: string
+  matchType?: string
   status: string
   venue: string
   date: string
@@ -10,6 +11,11 @@ export interface Match {
   score?: { r: number; w: number; o: number; inning: string }[]
   matchStarted: boolean
   matchEnded: boolean
+}
+
+export type RootStackParamList = {
+  Home: undefined
+  Scoreboard: { matchId: string; matchName: string }
 }
 
 export interface LiveMatchesResponse {
