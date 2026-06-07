@@ -3,9 +3,10 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Tex
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { AppHeader } from './AppHeader'
+import { FeedPausedCard } from './FeedPausedCard'
 import { MatchCard } from './MatchCard'
 import { StaleBanner } from './StaleBanner'
-import { friendlyLimitMessage, loadHomeCache, saveHomeCache } from '../lib/matchCache'
+import { friendlyLimitMessage, isBlockedError, loadHomeCache, saveHomeCache } from '../lib/matchCache'
 import { useFavorites } from '../context/FavoritesContext'
 import type { Match, RootStackParamList } from '../types/match'
 import { colors } from '../theme/colors'
@@ -91,17 +92,22 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
 
       {loading && !refreshing && matches.length === 0 ? (
         <ActivityIndicator color={colors.accent} style={styles.loader} />
-      ) : error && matches.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.errorTitle}>Couldn't load scores</Text>
-          <Text style={styles.error}>{error}</Text>
-          <Pressable onPress={() => load({})} style={styles.retryBtn}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
-        </View>
       ) : (
         <FlatList
           data={matches}
+          ListHeaderComponent={
+            (stale && notice && (isBlockedError(notice) || matches.length === 0)) ? (
+              <FeedPausedCard message={notice ?? error ?? undefined} onRetry={() => load({ pull: true })} />
+            ) : error && matches.length === 0 ? (
+              <View style={styles.center}>
+                <Text style={styles.errorTitle}>Couldn't load scores</Text>
+                <Text style={styles.error}>{error}</Text>
+                <Pressable onPress={() => load({})} style={styles.retryBtn}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </Pressable>
+              </View>
+            ) : null
+          }
           keyExtractor={(m) => m.id}
           renderItem={({ item }) => (
             <MatchCard

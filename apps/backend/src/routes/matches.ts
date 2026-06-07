@@ -20,7 +20,7 @@ export default async function matchesRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      return sendOrStale(app.redis, CACHE_KEYS.liveMatches(), e, reply)
+      return sendOrStale(app.redis, CACHE_KEYS.liveMatches(), e, reply, [])
     }
   })
 
@@ -33,7 +33,7 @@ export default async function matchesRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      return sendOrStale(app.redis, CACHE_KEYS.recentMatches(), e, reply)
+      return sendOrStale(app.redis, CACHE_KEYS.recentMatches(), e, reply, [])
     }
   })
 
@@ -46,7 +46,7 @@ export default async function matchesRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      return sendOrStale(app.redis, CACHE_KEYS.schedule(), e, reply)
+      return sendOrStale(app.redis, CACHE_KEYS.schedule(), e, reply, [])
     }
   })
 }

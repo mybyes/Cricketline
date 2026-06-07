@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppHeader } from '../components/AppHeader'
+import { FeedPausedCard } from '../components/FeedPausedCard'
 import { MatchCard } from '../components/MatchCard'
 import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
 import { StaleBanner } from '../components/StaleBanner'
 import { useFavorites } from '../context/FavoritesContext'
 import { fetchLiveMatches, fetchRecentMatches, fetchUpcomingMatches } from '../lib/api'
-import { friendlyLimitMessage, loadHomeCache, saveHomeCache } from '../lib/matchCache'
+import {
+  friendlyLimitMessage,
+  hydrateHomeFromFavorites,
+  isBlockedError,
+  loadHomeCache,
+  saveHomeCache,
+} from '../lib/matchCache'
 import type { Match, RootStackParamList } from '../types/match'
 import { colors } from '../theme/colors'
 
@@ -28,11 +35,19 @@ export function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [stale, setStale] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
-  const hasData = useRef(false)
+  const bootstrapped = useRef(false)
 
-  const load = useCallback(async (pull = false) => {
+  const applyFeed = useCallback((nextLive: Match[], nextRecent: Match[], nextUpcoming: Match[]) => {
+    setLive(nextLive)
+    setRecent(nextRecent)
+    setUpcoming(nextUpcoming)
+  }, [])
+
+  const load = useCallback(async (opts?: { pull?: boolean; silent?: boolean }) => {
+    const pull = opts?.pull ?? false
+    const silent = opts?.silent ?? false
     if (pull) setRefreshing(true)
-    else if (!hasData.current) setLoading(true)
+    else if (!silent) setLoading(true)
 
     const [l, r, u] = await Promise.all([
       fetchLiveMatches(),
@@ -40,46 +55,70 @@ export function HomeScreen() {
       fetchUpcomingMatches(),
     ])
 
+    const err = l.error ?? r.error ?? u.error
     const anyOk = l.success || r.success || u.success
-    const isStale = !!(l.stale || r.stale || u.stale)
+    const isStale = !!(l.stale || r.stale || u.stale) || !anyOk
 
     if (anyOk) {
       const prev = await loadHomeCache()
       const nextLive = l.success ? (l.data ?? []) : (prev?.live ?? [])
       const nextRecent = r.success ? (r.data ?? []) : (prev?.recent ?? [])
       const nextUpcoming = u.success ? (u.data ?? []) : (prev?.upcoming ?? [])
-      setLive(nextLive)
-      setRecent(nextRecent)
-      setUpcoming(nextUpcoming)
+      applyFeed(nextLive, nextRecent, nextUpcoming)
       await saveHomeCache(nextLive, nextRecent, nextUpcoming)
-      hasData.current = true
       setStale(isStale)
-      setNotice(isStale ? friendlyLimitMessage(l.error ?? r.error ?? u.error) : null)
+      setNotice(isStale ? friendlyLimitMessage(err) : null)
     } else {
-      const cached = await loadHomeCache()
+      let cached = await loadHomeCache()
+      if (!cached?.live.length && !cached?.recent.length && !cached?.upcoming.length) {
+        const fromFav = await hydrateHomeFromFavorites()
+        if (fromFav.live.length || fromFav.recent.length || fromFav.upcoming.length) {
+          cached = { ...fromFav, savedAt: Date.now() }
+        }
+      }
       if (cached && (cached.live.length || cached.recent.length || cached.upcoming.length)) {
-        setLive(cached.live)
-        setRecent(cached.recent)
-        setUpcoming(cached.upcoming)
-        hasData.current = true
+        applyFeed(cached.live, cached.recent, cached.upcoming)
         setStale(true)
-        setNotice(friendlyLimitMessage(l.error ?? r.error ?? u.error))
+        setNotice(friendlyLimitMessage(err))
       } else {
-        setNotice(l.error ?? r.error ?? u.error ?? 'Could not load scores')
+        setStale(true)
+        setNotice(err ?? 'Could not load scores')
       }
     }
 
     setLoading(false)
     setRefreshing(false)
-  }, [])
+  }, [applyFeed])
 
+  // Cache-first: show last good feed immediately, then refresh in background
   useEffect(() => {
-    load()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    if (bootstrapped.current) return
+    bootstrapped.current = true
+    ;(async () => {
+      const cached = await loadHomeCache()
+      if (cached && (cached.live.length || cached.recent.length || cached.upcoming.length)) {
+        applyFeed(cached.live, cached.recent, cached.upcoming)
+        setStale(true)
+        setLoading(false)
+        await load({ silent: true })
+        return
+      }
+      const fromFav = await hydrateHomeFromFavorites()
+      if (fromFav.live.length || fromFav.recent.length || fromFav.upcoming.length) {
+        applyFeed(fromFav.live, fromFav.recent, fromFav.upcoming)
+        setStale(true)
+        setNotice('Showing your saved matches — live feed is paused')
+        setLoading(false)
+        await load({ silent: true })
+        return
+      }
+      await load({ silent: false })
+    })()
+  }, [applyFeed, load])
 
   useEffect(() => {
     const ms = stale ? POLL_STALE_MS : POLL_LIVE_MS
-    const poll = setInterval(() => load(false), ms)
+    const poll = setInterval(() => load({ silent: true }), ms)
     return () => clearInterval(poll)
   }, [load, stale])
 
@@ -90,10 +129,10 @@ export function HomeScreen() {
     matchType: m.matchType,
   })
 
-  const renderSection = (title: string, data: Match[]) => data.length ? (
+  const renderSection = (title: string, data: Match[]) => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      {data.map((m) => (
+      {data.length > 0 ? data.map((m) => (
         <MatchCard
           key={m.id}
           match={m}
@@ -102,37 +141,62 @@ export function HomeScreen() {
           onToggleFavorite={() => toggle(m)}
           onPress={() => open(m)}
         />
-      ))}
+      )) : (
+        <Text style={styles.sectionEmpty}>
+          {title === 'Live now' ? 'No live matches in cache' : `Nothing in ${title.toLowerCase()} right now`}
+        </Text>
+      )}
     </View>
-  ) : null
+  )
 
-  const showList = hasData.current && !loading
+  const matchCount = live.length + recent.length + upcoming.length
+  const showSkeleton = loading && !refreshing && matchCount === 0
+  const feedPaused = stale && notice && (isBlockedError(notice) || matchCount === 0)
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <AppHeader title="CricketFast" subtitle="Live cricket line" right={
-        showList ? <View style={styles.pill}><Text style={styles.pillT}>{live.length}</Text></View> : undefined
-      } />
-      {stale && notice && <StaleBanner message={notice} />}
-      {loading && !refreshing && !hasData.current ? (
+      <AppHeader
+        title="CricketFast"
+        subtitle="Live cricket line"
+        right={matchCount > 0 ? (
+          <View style={styles.pill}><Text style={styles.pillT}>{live.length}</Text></View>
+        ) : undefined}
+      />
+
+      {showSkeleton ? (
         <View style={{ paddingTop: 8 }}>
           <MatchCardSkeleton />
           <MatchCardSkeleton />
           <MatchCardSkeleton />
         </View>
-      ) : showList ? (
+      ) : (
         <ScrollView
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.accent} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load({ pull: true })} tintColor={colors.accent} />}
           contentContainerStyle={styles.scroll}
         >
-          {live.length > 0 ? renderSection('Live now', live) : (
-            <Text style={styles.emptyLive}>No live matches right now</Text>
+          {stale && notice && <View style={styles.bannerWrap}><StaleBanner message={notice} /></View>}
+
+          {feedPaused && (
+            <FeedPausedCard message={notice ?? undefined} onRetry={() => load({ pull: true })} />
           )}
+
+          {renderSection('Live now', live)}
           {renderSection('Recent results', recent.slice(0, 8))}
           {renderSection('Upcoming fixtures', upcoming.slice(0, 8))}
+
+          {matchCount === 0 && !loading && (
+            <View style={styles.hintBox}>
+              <Text style={styles.hintTitle}>While you wait</Text>
+              <Text style={styles.hintBody}>
+                Star matches to keep them on this screen even when the live API is blocked.
+                Try the Fixtures tab or pull down to refresh.
+              </Text>
+              <Pressable onPress={() => navigation.getParent()?.navigate('Upcoming' as never)} style={styles.hintLink}>
+                <Text style={styles.hintLinkText}>Open Fixtures →</Text>
+              </Pressable>
+            </View>
+          )}
         </ScrollView>
-      ) : (
-        <Text style={styles.error}>{notice ?? 'Could not load scores'}</Text>
       )}
     </SafeAreaView>
   )
@@ -143,8 +207,13 @@ const styles = StyleSheet.create({
   pill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   pillT: { color: '#fff', fontWeight: '800', fontSize: 14 },
   scroll: { paddingBottom: 24 },
+  bannerWrap: { marginBottom: 4 },
   section: { marginTop: 8 },
   sectionTitle: { fontSize: 11, fontWeight: '800', color: colors.textDim, letterSpacing: 1, marginLeft: 16, marginBottom: 6, marginTop: 8 },
-  emptyLive: { color: colors.textDim, textAlign: 'center', marginTop: 24, marginBottom: 8, fontSize: 14 },
-  error: { color: colors.live, textAlign: 'center', marginTop: 48, padding: 16 },
+  sectionEmpty: { color: colors.textDim, textAlign: 'center', marginVertical: 16, fontSize: 13, paddingHorizontal: 24 },
+  hintBox: { margin: 16, padding: 16, backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
+  hintTitle: { fontSize: 14, fontWeight: '800', color: colors.text, marginBottom: 8 },
+  hintBody: { fontSize: 13, color: colors.textMuted, lineHeight: 20 },
+  hintLink: { marginTop: 12 },
+  hintLinkText: { fontSize: 14, fontWeight: '700', color: colors.header },
 })

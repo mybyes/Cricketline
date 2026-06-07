@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { loadLocalFavorites, savedToMatch } from './favorites'
 import type { Match } from '../types/match'
 import type { BbbBall } from '../types/extras'
 import type { ScorecardData } from '../types/scorecard'
@@ -40,6 +41,26 @@ export async function loadScoreCache(matchId: string): Promise<{ data: Scorecard
     return parsed
   } catch {
     return null
+  }
+}
+
+export function isBlockedError(err?: string): boolean {
+  const lower = (err ?? '').toLowerCase()
+  return lower.includes('block') || (lower.includes('15') && lower.includes('min'))
+}
+
+/** Saved favorites as a last-resort home feed when API is down */
+export async function hydrateHomeFromFavorites(): Promise<{
+  live: Match[]
+  recent: Match[]
+  upcoming: Match[]
+}> {
+  const favs = await loadLocalFavorites()
+  const matches = favs.map(savedToMatch)
+  return {
+    live: matches.filter((m) => m.matchStarted && !m.matchEnded),
+    recent: matches.filter((m) => m.matchEnded),
+    upcoming: matches.filter((m) => !m.matchStarted && !m.matchEnded),
   }
 }
 
