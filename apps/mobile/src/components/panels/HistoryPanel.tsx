@@ -9,6 +9,14 @@ import { formatScore, formatTimeShort } from '../../theme/matchUtils'
 
 type Nav = NativeStackNavigationProp<RootStackParamList>
 
+function teamWinsInH2H(matches: Match[], team: string): number {
+  const key = team.toLowerCase().split(' ')[0]
+  return matches.filter((m) => {
+    const s = m.status.toLowerCase()
+    return s.includes('won') && (s.includes(key) || m.teams.some((t) => t.toLowerCase().includes(key)))
+  }).length
+}
+
 export function HistoryPanel({ matchId }: { matchId: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -34,11 +42,26 @@ export function HistoryPanel({ matchId }: { matchId: string }) {
   if (loading) return <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />
   if (error) return <Text style={styles.error}>{error}</Text>
 
+  const w1 = teams[0] ? teamWinsInH2H(h2h, teams[0]) : 0
+  const w2 = teams[1] ? teamWinsInH2H(h2h, teams[1]) : 0
+
   return (
     <View>
-      <HistorySection title="HEAD TO HEAD" matches={h2h} empty="No recent H2H matches found" />
-      {teams[0] && <HistorySection title={`${teams[0]} — RECENT`} matches={t1} empty="No recent matches" />}
-      {teams[1] && <HistorySection title={`${teams[1]} — RECENT`} matches={t2} empty="No recent matches" />}
+      {h2h.length > 0 && teams.length >= 2 && (
+        <View style={styles.summary}>
+          <Text style={styles.summaryLabel}>HEAD TO HEAD</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryTeam} numberOfLines={1}>{teams[0]}</Text>
+            <Text style={styles.summaryScore}>{w1} – {w2}</Text>
+            <Text style={[styles.summaryTeam, { textAlign: 'right' }]} numberOfLines={1}>{teams[1]}</Text>
+          </View>
+          <Text style={styles.summaryMeta}>{h2h.length} recent meeting{h2h.length === 1 ? '' : 's'}</Text>
+        </View>
+      )}
+
+      <HistorySection title="H2H MATCHES" matches={h2h} empty="No recent H2H matches found" />
+      {teams[0] && <HistorySection title={`${teams[0]} — LAST 5`} matches={t1} empty="No recent matches" />}
+      {teams[1] && <HistorySection title={`${teams[1]} — LAST 5`} matches={t2} empty="No recent matches" />}
     </View>
   )
 }
@@ -70,7 +93,7 @@ function HistorySection({ title, matches, empty }: { title: string; matches: Mat
               <Text style={styles.name} numberOfLines={1}>{m.teams.join(' vs ')}</Text>
               {scoreLine && <Text style={styles.scores}>{scoreLine}</Text>}
               <Text style={styles.status} numberOfLines={2}>{m.status}</Text>
-              <Text style={styles.meta}>{formatTimeShort(m.dateTimeGMT)} · Tap to open</Text>
+              <Text style={styles.meta}>{formatTimeShort(m.dateTimeGMT)} · {m.venue}</Text>
             </Pressable>
           )
         })
@@ -80,6 +103,12 @@ function HistorySection({ title, matches, empty }: { title: string; matches: Mat
 }
 
 const styles = StyleSheet.create({
+  summary: { backgroundColor: colors.card, borderRadius: 6, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: colors.border },
+  summaryLabel: { fontSize: 10, fontWeight: '800', color: colors.textDim, letterSpacing: 0.8, marginBottom: 10 },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  summaryTeam: { flex: 1, fontSize: 12, fontWeight: '700', color: colors.text },
+  summaryScore: { fontSize: 22, fontWeight: '900', color: colors.score },
+  summaryMeta: { fontSize: 10, color: colors.textDim, marginTop: 8, textAlign: 'center' },
   section: { marginBottom: 14 },
   label: { fontSize: 10, fontWeight: '800', color: colors.textDim, letterSpacing: 0.8, marginBottom: 8 },
   row: { backgroundColor: colors.card, padding: 12, marginBottom: 6, borderRadius: 4, borderWidth: 1, borderColor: colors.border },

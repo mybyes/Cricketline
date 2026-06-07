@@ -1,3 +1,4 @@
+import type { BbbBall } from '../types/extras'
 import type { InningScorecard } from '../types/scorecard'
 
 export interface PartnershipRow {
@@ -5,6 +6,42 @@ export interface PartnershipRow {
   runs: number
   balls: number
   ended: string
+}
+
+function isWicketBall(b: BbbBall): boolean {
+  const ev = (b.event ?? '').toLowerCase()
+  return ev.includes('wicket') || ev.includes('wkt') || ev.includes('bowled') || ev.includes('caught')
+}
+
+/** Partnership runs between wickets from ball-by-ball data */
+export function partnershipsFromBbb(bbb: BbbBall[]): PartnershipRow[] {
+  const rows: PartnershipRow[] = []
+  let runs = 0
+  let balls = 0
+  let batters = ''
+
+  for (const b of bbb) {
+    runs += b.runs ?? 0
+    balls++
+    if (b.batsman && b.bowler) batters = `${b.batsman} · ${b.bowler}`
+
+    if (isWicketBall(b)) {
+      rows.push({
+        batsmen: b.batsman ?? (batters || '—'),
+        runs,
+        balls,
+        ended: b.event ?? 'Wicket',
+      })
+      runs = 0
+      balls = 0
+      batters = ''
+    }
+  }
+
+  if (runs > 0) {
+    rows.push({ batsmen: 'At crease', runs, balls, ended: 'batting' })
+  }
+  return rows
 }
 
 export function currentPartnership(inning: InningScorecard): PartnershipRow | null {

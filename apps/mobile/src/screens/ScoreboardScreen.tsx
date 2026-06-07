@@ -14,6 +14,7 @@ import { LiveLinePanel } from '../components/LiveLinePanel'
 import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
 import { TeamAvatar } from '../components/TeamAvatar'
 import { HistoryPanel } from '../components/panels/HistoryPanel'
+import { PartnershipPanel } from '../components/panels/PartnershipPanel'
 import { PredictionPanel } from '../components/panels/PredictionPanel'
 import { RatesPanel } from '../components/panels/RatesPanel'
 import { SessionPanel } from '../components/panels/SessionPanel'
@@ -26,13 +27,14 @@ import { colors } from '../theme/colors'
 import { formatScore, formatSr } from '../theme/matchUtils'
 
 type Route = RouteProp<RootStackParamList, 'Scoreboard'>
-type Tab = 'line' | 'session' | 'rates' | 'prediction' | 'scorecard' | 'history' | 'squad' | 'table' | 'info'
+type Tab = 'line' | 'session' | 'rates' | 'prediction' | 'partnership' | 'scorecard' | 'history' | 'squad' | 'table' | 'info'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'line', label: 'Live Line' },
   { key: 'session', label: 'Session' },
   { key: 'rates', label: 'Rates' },
   { key: 'prediction', label: 'Win %' },
+  { key: 'partnership', label: "P'ship" },
   { key: 'scorecard', label: 'Scorecard' },
   { key: 'history', label: 'History' },
   { key: 'squad', label: 'Squad' },
@@ -281,6 +283,7 @@ export function ScoreboardScreen() {
       case 'session': return <SessionPanel data={data} bbb={bbb} />
       case 'rates': return <RatesPanel data={data} />
       case 'prediction': return <PredictionPanel data={data} />
+      case 'partnership': return <PartnershipPanel data={data} bbb={bbb} />
       case 'history': return <HistoryPanel matchId={matchId} />
       case 'squad': return <SquadPanel matchId={matchId} />
       case 'table': return <TablePanel seriesId={seriesId} />

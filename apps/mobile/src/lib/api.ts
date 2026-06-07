@@ -2,7 +2,9 @@ import type { LiveMatchesResponse } from '../types/match'
 import type { ScorecardResponse } from '../types/scorecard'
 import type { BbbBall, MatchHistoryData, SeriesItem, SeriesTableData, SquadTeam } from '../types/extras'
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000'
+import { getApiUrl as resolveApiUrl } from './apiUrl'
+
+const API_URL = resolveApiUrl()
 
 export function getApiUrl() {
   return API_URL

@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
+import { OverRunChart } from '../OverRunChart'
 import type { BbbBall } from '../../types/extras'
+import { runsPerOver } from '../../lib/overRuns'
 import { t20PhaseStats } from '../../lib/sessionPhases'
 import type { ScorecardData } from '../../types/scorecard'
 import { colors } from '../../theme/colors'
@@ -11,6 +13,7 @@ export function SessionPanel({ data, bbb = [] }: { data: ScorecardData; bbb?: Bb
   const isTest = data.matchType?.toLowerCase() === 'test'
   const scores = data.score ?? []
   const phases = t20PhaseStats(bbb, data.matchType)
+  const overRuns = runsPerOver(bbb)
 
   return (
     <View>
@@ -59,6 +62,8 @@ export function SessionPanel({ data, bbb = [] }: { data: ScorecardData; bbb?: Bb
           </Text>
         </View>
       )}
+
+      {overRuns.length > 0 && <OverRunChart data={overRuns} />}
     </View>
   )
 }

@@ -1,6 +1,8 @@
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
 import { FavoritesProvider } from './src/context/FavoritesContext'
+import { useNotificationNavigation } from './src/hooks/useNotificationNavigation'
+import { navigationRef } from './src/navigation/navigationRef'
 import { RootTabs } from './src/navigation/RootTabs'
 import { colors } from './src/theme/colors'
 
@@ -16,12 +18,17 @@ const theme = {
   },
 }
 
+function AppRoot() {
+  useNotificationNavigation()
+  return <RootTabs />
+}
+
 export default function App() {
   return (
     <FavoritesProvider>
-      <NavigationContainer theme={theme}>
+      <NavigationContainer ref={navigationRef} theme={theme}>
         <StatusBar style="light" />
-        <RootTabs />
+        <AppRoot />
       </NavigationContainer>
     </FavoritesProvider>
   )
