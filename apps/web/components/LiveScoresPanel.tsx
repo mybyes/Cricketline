@@ -113,12 +113,14 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
       fetchMatches('/matches/recent'),
       fetchMatches('/matches/upcoming'),
     ])
-    setLive(l.data)
-    setRecent(r.data)
-    setUpcoming(u.data)
+    setLive((prev) => (l.data.length ? l.data : prev))
+    setRecent((prev) => (r.data.length ? r.data : prev))
+    setUpcoming((prev) => (u.data.length ? u.data : prev))
     setStale(l.stale || r.stale || u.stale)
-    const empty = !l.data.length && !r.data.length && !u.data.length
-    setError(empty ? (l.error ?? r.error ?? u.error) : undefined)
+    setError((prevErr) => {
+      const hasAny = l.data.length || r.data.length || u.data.length
+      return hasAny ? undefined : (l.error ?? r.error ?? u.error ?? prevErr)
+    })
   }, [])
 
   useEffect(() => {
@@ -140,10 +142,10 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
         </div>
       )}
 
-      {stale && (
-        <div className="alert-banner alert-stale">Cached scores — refreshing automatically.</div>
+      {stale && list.length > 0 && (
+        <div className="alert-banner alert-stale">Showing cached scores — live API temporarily limited. Data may be a few minutes old.</div>
       )}
-      {error && (
+      {error && list.length === 0 && (
         <div className="alert-banner alert-error">{error}</div>
       )}
 

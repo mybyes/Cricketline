@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { getSeriesList, getSeriesTable } from '../services/cricapi'
 import { CACHE_KEYS, SERIES_LIST_TTL, SERIES_TABLE_TTL, cached, withStaleFallback } from '../services/cache'
+import { sendOrStale } from './staleCatch'
 
 export default async function seriesRoute(app: FastifyInstance) {
   app.get('/series', async (req, reply) => {
@@ -11,7 +12,7 @@ export default async function seriesRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+      return sendOrStale(app.redis, key, e, reply)
     }
   })
 
@@ -24,7 +25,7 @@ export default async function seriesRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+      return sendOrStale(app.redis, key, e, reply)
     }
   })
 }

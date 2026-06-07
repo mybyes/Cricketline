@@ -5,6 +5,7 @@ import {
   getMatchSquad,
 } from '../services/cricapi'
 import { CACHE_KEYS, SQUAD_TTL, BBB_TTL, HISTORY_TTL, cached, withStaleFallback } from '../services/cache'
+import { sendOrStale } from './staleCatch'
 
 export default async function matchExtrasRoute(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/match/:id/squad', async (req, reply) => {
@@ -16,7 +17,7 @@ export default async function matchExtrasRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+      return sendOrStale(app.redis, key, e, reply)
     }
   })
 
@@ -29,7 +30,7 @@ export default async function matchExtrasRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+      return sendOrStale(app.redis, key, e, reply)
     }
   })
 
@@ -42,7 +43,7 @@ export default async function matchExtrasRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+      return sendOrStale(app.redis, key, e, reply)
     }
   })
 }

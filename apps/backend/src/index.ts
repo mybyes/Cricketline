@@ -37,7 +37,16 @@ async function start() {
   app.log.info(dbReady ? 'PostgreSQL connected' : 'Using Redis for favorites (set DATABASE_URL for Postgres)')
 
   await app.register(cors, { origin: '*' })
-  await app.register(rateLimit, { max: 10, timeWindow: '1 minute' })
+  // App polls ~12 req/min per screen; 10/min caused 429s and blank UIs
+  await app.register(rateLimit, {
+    max: 200,
+    timeWindow: '1 minute',
+    ban: 0,
+    errorResponseBuilder: () => ({
+      success: false,
+      error: 'Too many requests — wait a moment and retry. Cached scores may still be available.',
+    }),
+  })
   app.register(matchesRoute)
   app.register(scoreRoute)
   app.register(matchExtrasRoute)

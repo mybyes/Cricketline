@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify'
 import { getLiveMatches, getRecentMatches, getUpcomingMatches } from '../services/cricapi'
 import { cached, CACHE_KEYS, LIVE_MATCHES_TTL, RECENT_TTL, SCHEDULE_TTL, withStaleFallback } from '../services/cache'
 import { processWicketAlerts } from '../services/wicketAlerts'
+import { sendOrStale } from './staleCatch'
 
 export default async function matchesRoute(app: FastifyInstance) {
   app.get('/matches/live', async (req, reply) => {
@@ -19,7 +20,7 @@ export default async function matchesRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+      return sendOrStale(app.redis, CACHE_KEYS.liveMatches(), e, reply)
     }
   })
 
@@ -32,7 +33,7 @@ export default async function matchesRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+      return sendOrStale(app.redis, CACHE_KEYS.recentMatches(), e, reply)
     }
   })
 
@@ -45,7 +46,7 @@ export default async function matchesRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+      return sendOrStale(app.redis, CACHE_KEYS.schedule(), e, reply)
     }
   })
 }

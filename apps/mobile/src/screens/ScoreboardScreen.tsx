@@ -10,6 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { fetchLiveMatches, fetchMatchBbb, fetchMatchScore } from '../lib/api'
 import { fallOfWickets } from '../lib/partnerships'
 import { LiveBadge } from '../components/LiveBadge'
+import { StaleBanner } from '../components/StaleBanner'
+import { friendlyLimitMessage, loadScoreCache, saveScoreCache } from '../lib/matchCache'
 import { LiveLinePanel } from '../components/LiveLinePanel'
 import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
 import { TeamAvatar } from '../components/TeamAvatar'
@@ -181,6 +183,8 @@ export function ScoreboardScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [stale, setStale] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   const [data, setData] = useState<ScorecardData | null>(null)
   const [bbb, setBbb] = useState<BbbBall[]>([])
   const [otherLive, setOtherLive] = useState<Match[]>([])
@@ -199,31 +203,55 @@ export function ScoreboardScreen() {
     const silent = opts?.silent ?? false
     const pull = opts?.pull ?? false
     if (pull) setRefreshing(true)
-    else if (!silent) setLoading(true)
-    setError(null)
-    try {
-      const [scoreRes, bbbRes, liveRes] = await Promise.all([
-        fetchMatchScore(matchId),
-        fetchMatchBbb(matchId).catch(() => ({ success: true, data: [] as BbbBall[] })),
-        fetchLiveMatches().catch(() => ({ success: true, data: [] as Match[] })),
-      ])
-      if (!scoreRes.success) throw new Error(scoreRes.error ?? 'API error')
+    else if (!silent && !data) setLoading(true)
+
+    const [scoreRes, bbbRes, liveRes] = await Promise.all([
+      fetchMatchScore(matchId),
+      fetchMatchBbb(matchId),
+      fetchLiveMatches(),
+    ])
+
+    if (scoreRes.success && scoreRes.data) {
+      const nextBbb = bbbRes.success && Array.isArray(bbbRes.data) ? bbbRes.data : bbb
       setData(scoreRes.data)
-      if (bbbRes.success && Array.isArray(bbbRes.data)) setBbb(bbbRes.data)
-      if (liveRes.success) setOtherLive(liveRes.data.filter((m) => m.id !== matchId && m.matchStarted && !m.matchEnded))
-    } catch (e: any) {
-      setError(e.message ?? 'Failed to load scorecard')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
+      setBbb(nextBbb)
+      setStale(!!scoreRes.stale || !!bbbRes.stale)
+      setNotice(
+        scoreRes.stale || bbbRes.stale
+          ? friendlyLimitMessage(scoreRes.error ?? bbbRes.error)
+          : null,
+      )
+      setError(null)
+      await saveScoreCache(matchId, scoreRes.data, nextBbb)
+    } else {
+      const cached = await loadScoreCache(matchId)
+      if (cached) {
+        setData(cached.data)
+        setBbb(cached.bbb)
+        setStale(true)
+        setNotice(friendlyLimitMessage(scoreRes.error))
+        setError(null)
+      } else if (!data) {
+        setError(scoreRes.error ?? 'Failed to load scorecard')
+      } else {
+        setStale(true)
+        setNotice(friendlyLimitMessage(scoreRes.error))
+      }
     }
-  }, [matchId])
+
+    if (liveRes.success) {
+      setOtherLive(liveRes.data.filter((m) => m.id !== matchId && m.matchStarted && !m.matchEnded))
+    }
+
+    setLoading(false)
+    setRefreshing(false)
+  }, [matchId, data, bbb])
 
   useEffect(() => {
     load({ silent: false })
-    const poll = setInterval(() => load({ silent: true }), 12_000)
+    const poll = setInterval(() => load({ silent: true }), stale ? 45_000 : 12_000)
     return () => clearInterval(poll)
-  }, [load])
+  }, [load, stale])
 
   const scrollTabIntoView = useCallback((index: number) => {
     const layout = tabLayouts.current[index]
@@ -333,6 +361,8 @@ export function ScoreboardScreen() {
         </View>
         <Text style={styles.matchTitle} numberOfLines={1}>{headerTitle}</Text>
       </SafeAreaView>
+
+      {stale && notice && data && <StaleBanner message={notice} />}
 
       {loading && !data ? (
         <View style={{ padding: 12 }}><MatchCardSkeleton /><ActivityIndicator color={colors.accent} style={{ marginTop: 16 }} /></View>

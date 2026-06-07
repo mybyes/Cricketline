@@ -29,9 +29,21 @@ export async function cached<T>(
   return fresh
 }
 
-async function readCache<T>(redis: Redis, key: string): Promise<T | null> {
+export async function readCache<T>(redis: Redis, key: string): Promise<T | null> {
   const hit = await redis.get(key) ?? await redis.get(`${key}:backup`)
   return hit ? (JSON.parse(hit) as T) : null
+}
+
+/** Last-resort: return cached data with stale flag instead of a hard 500 */
+export async function staleResponse<T>(
+  redis: Redis,
+  key: string,
+  err: unknown,
+): Promise<{ success: true; data: T; stale: true; error: string } | null> {
+  const hit = await readCache<T>(redis, key)
+  if (!hit) return null
+  const msg = err instanceof Error ? err.message : 'Upstream unavailable'
+  return { success: true, data: hit, stale: true, error: msg }
 }
 
 export const CACHE_KEYS = {

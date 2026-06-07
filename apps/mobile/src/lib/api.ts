@@ -10,11 +10,23 @@ export function getApiUrl() {
   return API_URL
 }
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, init)
-  const body = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`)
-  return body as T
+/** Read-only API — never throws; keeps UI able to show last cached layer */
+async function api<T extends { success: boolean }>(path: string, init?: RequestInit): Promise<T> {
+  try {
+    const res = await fetch(`${API_URL}${path}`, init)
+    const body = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` })) as T
+    if (body.success) return body
+    return {
+      ...body,
+      success: false,
+      error: (body as { error?: string }).error ?? `HTTP ${res.status}`,
+    } as unknown as T
+  } catch (e) {
+    return {
+      success: false,
+      error: e instanceof Error ? e.message : 'Network error',
+    } as unknown as T
+  }
 }
 
 export async function fetchLiveMatches(): Promise<LiveMatchesResponse> {
@@ -34,7 +46,7 @@ export async function fetchMatchSquad(matchId: string) {
 }
 
 export async function fetchMatchBbb(matchId: string) {
-  return api<{ success: boolean; data: BbbBall[]; error?: string }>(`/match/${matchId}/bbb`)
+  return api<{ success: boolean; data: BbbBall[]; error?: string; stale?: boolean }>(`/match/${matchId}/bbb`)
 }
 
 export async function fetchMatchHistory(matchId: string) {

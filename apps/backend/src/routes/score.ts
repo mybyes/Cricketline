@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { getMatchScore } from '../services/cricapi'
 import { cached, CACHE_KEYS, SCORECARD_TTL, withStaleFallback } from '../services/cache'
+import { sendOrStale } from './staleCatch'
 
 export default async function scoreRoute(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/match/:id/score', async (req, reply) => {
@@ -14,7 +15,7 @@ export default async function scoreRoute(app: FastifyInstance) {
       )
       return { success: true, data, stale: stale ?? false }
     } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+      return sendOrStale(app.redis, key, e, reply)
     }
   })
 }

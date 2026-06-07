@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { AppHeader } from './AppHeader'
 import { MatchCard } from './MatchCard'
+import { StaleBanner } from './StaleBanner'
+import { friendlyLimitMessage, loadHomeCache, saveHomeCache } from '../lib/matchCache'
 import { useFavorites } from '../context/FavoritesContext'
 import type { Match, RootStackParamList } from '../types/match'
 import { colors } from '../theme/colors'
@@ -23,27 +25,41 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
   const navigation = useNavigation<Nav>()
   const { favoriteIds, toggle } = useFavorites()
   const [matches, setMatches] = useState<Match[]>([])
+  const matchesRef = useRef<Match[]>([])
+  matchesRef.current = matches
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stale, setStale] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   const load = useCallback(async (opts?: { pull?: boolean; silent?: boolean }) => {
     const pull = opts?.pull ?? false
     const silent = opts?.silent ?? false
     if (pull) setRefreshing(true)
     else if (!silent) setLoading(true)
-    setError(null)
-    try {
-      const res = await fetcher()
-      if (!res.success) throw new Error(res.error ?? 'API error')
+
+    const res = await fetcher()
+    if (res.success) {
       setMatches(res.data)
       setStale(!!res.stale)
-    } catch (e: any) {
-      setError(e.message ?? 'Failed to load')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
+      setNotice(res.stale ? friendlyLimitMessage(res.error) : null)
+      setError(null)
+      await saveHomeCache(res.data, [], [])
+    } else {
+      const cached = await loadHomeCache()
+      const fallback = cached?.live?.length ? cached.live : matchesRef.current
+      if (fallback.length) {
+        setMatches(fallback)
+        setStale(true)
+        setNotice(friendlyLimitMessage(res.error))
+        setError(null)
+      } else {
+        setError(res.error ?? 'Failed to load')
+      }
     }
+
+    setLoading(false)
+    setRefreshing(false)
   }, [fetcher])
 
   useEffect(() => {
@@ -64,9 +80,7 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
         ) : undefined}
       />
 
-      {stale && (
-        <View style={styles.staleBar}><Text style={styles.staleText}>Showing cached scores — API rate limited</Text></View>
-      )}
+      {stale && notice && <StaleBanner message={notice} />}
 
       {liveCount > 0 && headerTitle === 'CricketFast' && (
         <View style={styles.liveBar}>
@@ -75,9 +89,9 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
         </View>
       )}
 
-      {loading && !refreshing ? (
+      {loading && !refreshing && matches.length === 0 ? (
         <ActivityIndicator color={colors.accent} style={styles.loader} />
-      ) : error ? (
+      ) : error && matches.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.errorTitle}>Couldn't load scores</Text>
           <Text style={styles.error}>{error}</Text>

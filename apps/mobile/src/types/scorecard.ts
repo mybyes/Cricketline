@@ -46,4 +46,5 @@ export interface ScorecardResponse {
   success: boolean
   data: ScorecardData
   error?: string
+  stale?: boolean
 }
