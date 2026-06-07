@@ -5,6 +5,11 @@ import { getAllMatchesCached } from './cricapi'
 
 /** Populate Redis backups on boot so first user never sees a blank feed after a block. */
 export async function warmCaches(redis: Redis, log: FastifyBaseLogger) {
+  const inBackoff = await redis.get('meta:cricapi:backoff')
+  if (inBackoff) {
+    log.info('cache warm: skipped — upstream in cooldown')
+    return
+  }
   try {
     const all = await getAllMatchesCached(redis)
     log.info({ count: all.length }, 'cache warm: all matches')

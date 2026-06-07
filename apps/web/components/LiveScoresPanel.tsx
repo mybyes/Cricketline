@@ -166,6 +166,8 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
   const list = tab === 'live' ? live : tab === 'recent' ? recent : upcoming
   const label = tab === 'live' ? 'live' : tab === 'recent' ? 'recent' : 'upcoming'
   const liveCount = live.filter((m) => m.matchStarted && !m.matchEnded).length
+  const totalMatches = live.length + recent.length + upcoming.length
+  const feedEmpty = totalMatches === 0
 
   return (
     <div className="live-panel" id="fixtures">
@@ -198,8 +200,19 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
 
       {list.length === 0 ? (
         <div className="empty-state">
-          <p className="empty-title">No {label} matches right now</p>
-          <p className="empty-sub">Check other tabs or refresh in a moment.</p>
+          {feedEmpty ? (
+            <>
+              <p className="empty-title">Syncing live scores</p>
+              <p className="empty-sub">
+                First load pulls from our score cache. If nothing appears in a few minutes, the data provider is in a short cooldown — scores fill in automatically once synced.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="empty-title">No {label} matches right now</p>
+              <p className="empty-sub">Check other tabs — other sections may have matches.</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="match-list">

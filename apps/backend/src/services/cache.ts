@@ -12,6 +12,8 @@ const HISTORY_TTL      = 300
 const SERIES_LIST_TTL  = 600
 const SERIES_TABLE_TTL = 300
 const ALL_MATCHES_TTL  = 300
+const UPSTREAM_BACKOFF_KEY = 'meta:cricapi:backoff'
+const UPSTREAM_BACKOFF_SEC = 900 // match CricAPI 15-min cooldown
 
 type CacheBlob<T> = { v: T; at: number }
 
@@ -52,6 +54,31 @@ async function writeCache<T>(redis: Redis, key: string, ttl: number, data: T) {
 
 export type CacheResult<T> = { data: T; stale: boolean; cachedAt: number }
 
+async function upstreamInBackoff(redis: Redis) {
+  return !!(await redis.get(UPSTREAM_BACKOFF_KEY))
+}
+
+async function markUpstreamBackoff(redis: Redis) {
+  await redis.setex(UPSTREAM_BACKOFF_KEY, UPSTREAM_BACKOFF_SEC, '1')
+}
+
+async function clearUpstreamBackoff(redis: Redis) {
+  await redis.del(UPSTREAM_BACKOFF_KEY)
+}
+
+async function serveStaleOnly<T>(redis: Redis, key: string): Promise<CacheResult<T> | null> {
+  const backup = await readBackup<T>(redis, key)
+  if (backup) return { data: backup.data, stale: true, cachedAt: backup.cachedAt }
+  const primary = await redis.get(key)
+  if (primary) {
+    const entry = parseEntry<T>(primary)
+    if (isNonempty(entry.data)) {
+      return { data: entry.data, stale: false, cachedAt: entry.cachedAt }
+    }
+  }
+  return null
+}
+
 /** Read-through cache: primary → live fetch → backup (never wipes good data with empty) */
 export async function cached<T>(
   redis: Redis,
@@ -70,8 +97,15 @@ export async function cached<T>(
     return { data: entry.data, stale: false, cachedAt: entry.cachedAt }
   }
 
+  if (await upstreamInBackoff(redis)) {
+    const stale = await serveStaleOnly<T>(redis, key)
+    if (stale) return stale
+    throw new Error('upstream_unavailable')
+  }
+
   try {
     const fresh = await fetcher()
+    if (isNonempty(fresh)) await clearUpstreamBackoff(redis)
     await writeCache(redis, key, ttl, fresh)
     if (isNonempty(fresh)) {
       return { data: fresh, stale: false, cachedAt: Date.now() }
@@ -80,6 +114,7 @@ export async function cached<T>(
     if (backup) return { data: backup.data, stale: true, cachedAt: backup.cachedAt }
     return { data: fresh, stale: false, cachedAt: Date.now() }
   } catch {
+    await markUpstreamBackoff(redis)
     const backup = await readBackup<T>(redis, key)
     if (backup) return { data: backup.data, stale: true, cachedAt: backup.cachedAt }
     throw new Error('upstream_unavailable')
