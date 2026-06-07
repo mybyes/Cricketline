@@ -40,8 +40,7 @@ export default async function HomePage() {
   ])
   const series = (seriesRes.data?.length ? seriesRes.data : FALLBACK_SERIES).slice(0, 12)
   const stale = liveRes.stale || recentRes.stale || upcomingRes.stale
-  const hasAny = liveRes.data.length + recentRes.data.length + upcomingRes.data.length > 0
-  const error = !hasAny ? (liveRes.error ?? recentRes.error ?? upcomingRes.error) : undefined
+  const cachedAt = Math.max(liveRes.cachedAt ?? 0, recentRes.cachedAt ?? 0, upcomingRes.cachedAt ?? 0) || undefined
 
   return (
     <>
@@ -85,7 +84,7 @@ export default async function HomePage() {
             recent: recentRes.data,
             upcoming: upcomingRes.data,
             stale,
-            error,
+            cachedAt,
           }} />
 
           <section className="seo-block" id="download">

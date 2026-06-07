@@ -34,15 +34,26 @@ export interface StandingRow {
 export interface ApiResult<T> {
   data: T
   stale: boolean
+  cachedAt?: number
   error?: string
 }
 
 async function get<T>(path: string, revalidate = 15): Promise<ApiResult<T>> {
   try {
     const res = await fetch(`${API}${path}`, { next: { revalidate } })
-    const body = await res.json().catch(() => ({})) as { success?: boolean; data?: T; error?: string; stale?: boolean }
+    const body = await res.json().catch(() => ({})) as {
+      success?: boolean
+      data?: T
+      error?: string
+      stale?: boolean
+      cachedAt?: number
+    }
     if (body.success && body.data != null) {
-      return { data: body.data, stale: !!body.stale, error: body.error }
+      return {
+        data: body.data,
+        stale: !!body.stale,
+        cachedAt: typeof body.cachedAt === 'number' ? body.cachedAt : undefined,
+      }
     }
     return { data: [] as T, stale: false, error: body.error ?? `API ${res.status}` }
   } catch (e: unknown) {

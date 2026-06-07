@@ -1,9 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { Match } from '@/lib/api'
 import { getPublicApiUrl } from '@/lib/apiUrl'
+import { staleNotice } from '@/lib/cacheTime'
+import { loadHomeCache, mergeMatchList, saveHomeCache } from '@/lib/matchCache'
 import { TeamBadge } from './TeamBadge'
 
 const API = getPublicApiUrl()
@@ -15,21 +17,22 @@ export interface LiveScoresInitial {
   recent: Match[]
   upcoming: Match[]
   stale?: boolean
-  error?: string
+  cachedAt?: number
 }
 
-async function fetchMatches(path: string): Promise<{ data: Match[]; stale: boolean; error?: string }> {
+async function fetchMatches(path: string): Promise<{ data: Match[]; stale: boolean; cachedAt?: number }> {
   try {
     const res = await fetch(`${API}${path}`, { cache: 'no-store' })
     const body = await res.json()
     if (body.success && Array.isArray(body.data)) {
-      return { data: body.data, stale: !!body.stale, error: body.error }
+      return { data: body.data, stale: !!body.stale, cachedAt: body.cachedAt }
     }
-    return { data: [], stale: false, error: body.error ?? `HTTP ${res.status}` }
-  } catch (e: unknown) {
-    return { data: [], stale: false, error: e instanceof Error ? e.message : 'Network error' }
+    return { data: [], stale: true }
+  } catch {
+    return { data: [], stale: true }
   }
 }
+
 
 function fmtScore(s?: { r: number; w: number; o: number }) {
   return s ? `${s.r}/${s.w} (${s.o})` : '—'
@@ -99,13 +102,34 @@ function WebMatchCard({ match }: { match: Match }) {
   )
 }
 
+function bootLists(initial?: LiveScoresInitial) {
+  const disk = typeof window !== 'undefined' ? loadHomeCache() : null
+  return {
+    live: mergeMatchList(initial?.live ?? [], disk?.live ?? []),
+    recent: mergeMatchList(initial?.recent ?? [], disk?.recent ?? []),
+    upcoming: mergeMatchList(initial?.upcoming ?? [], disk?.upcoming ?? []),
+    diskAt: disk?.savedAt,
+  }
+}
+
 export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
+  const boot = bootLists(initial)
   const [tab, setTab] = useState<Tab>('live')
-  const [live, setLive] = useState<Match[]>(initial?.live ?? [])
-  const [recent, setRecent] = useState<Match[]>(initial?.recent ?? [])
-  const [upcoming, setUpcoming] = useState<Match[]>(initial?.upcoming ?? [])
-  const [stale, setStale] = useState(initial?.stale ?? false)
-  const [error, setError] = useState<string | undefined>(initial?.error)
+  const [live, setLive] = useState<Match[]>(boot.live)
+  const [recent, setRecent] = useState<Match[]>(boot.recent)
+  const [upcoming, setUpcoming] = useState<Match[]>(boot.upcoming)
+  const liveRef = useRef(boot.live)
+  const recentRef = useRef(boot.recent)
+  const upcomingRef = useRef(boot.upcoming)
+  liveRef.current = live
+  recentRef.current = recent
+  upcomingRef.current = upcoming
+  const [stale, setStale] = useState(initial?.stale ?? !!boot.diskAt)
+  const [cachedLabel, setCachedLabel] = useState<string | null>(
+    (initial?.stale || boot.diskAt) && (initial?.cachedAt ?? boot.diskAt)
+      ? staleNotice(initial?.cachedAt ?? boot.diskAt)
+      : null,
+  )
 
   const load = useCallback(async () => {
     const [l, r, u] = await Promise.all([
@@ -113,14 +137,25 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
       fetchMatches('/matches/recent'),
       fetchMatches('/matches/upcoming'),
     ])
-    setLive((prev) => (l.data.length ? l.data : prev))
-    setRecent((prev) => (r.data.length ? r.data : prev))
-    setUpcoming((prev) => (u.data.length ? u.data : prev))
-    setStale(l.stale || r.stale || u.stale)
-    setError((prevErr) => {
-      const hasAny = l.data.length || r.data.length || u.data.length
-      return hasAny ? undefined : (l.error ?? r.error ?? u.error ?? prevErr)
-    })
+    const disk = loadHomeCache()
+    const nextLive = mergeMatchList(l.data, liveRef.current.length ? liveRef.current : (disk?.live ?? []))
+    const nextRecent = mergeMatchList(r.data, recentRef.current.length ? recentRef.current : (disk?.recent ?? []))
+    const nextUpcoming = mergeMatchList(u.data, upcomingRef.current.length ? upcomingRef.current : (disk?.upcoming ?? []))
+    setLive(nextLive)
+    setRecent(nextRecent)
+    setUpcoming(nextUpcoming)
+    if (nextLive.length || nextRecent.length || nextUpcoming.length) {
+      saveHomeCache(nextLive, nextRecent, nextUpcoming)
+    }
+    const usedDisk = (l.data.length === 0 && nextLive.length > 0)
+      || (r.data.length === 0 && nextRecent.length > 0)
+      || (u.data.length === 0 && nextUpcoming.length > 0)
+    const isStale = l.stale || r.stale || u.stale || usedDisk
+    setStale(isStale)
+    const ts = Math.max(l.cachedAt ?? 0, r.cachedAt ?? 0, u.cachedAt ?? 0, disk?.savedAt ?? 0)
+    setCachedLabel(isStale && (nextLive.length + nextRecent.length + nextUpcoming.length) > 0
+      ? staleNotice(ts || undefined)
+      : null)
   }, [])
 
   useEffect(() => {
@@ -142,11 +177,8 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
         </div>
       )}
 
-      {stale && list.length > 0 && (
-        <div className="alert-banner alert-stale">Showing cached scores — live API temporarily limited. Data may be a few minutes old.</div>
-      )}
-      {error && list.length === 0 && (
-        <div className="alert-banner alert-error">{error}</div>
+      {stale && list.length > 0 && cachedLabel && (
+        <div className="alert-banner alert-stale">{cachedLabel}</div>
       )}
 
       <div className="tab-row" role="tablist">
@@ -167,11 +199,7 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
       {list.length === 0 ? (
         <div className="empty-state">
           <p className="empty-title">No {label} matches right now</p>
-          <p className="empty-sub">
-            {tab === 'live'
-              ? 'Check Results or Fixtures — or come back when a match is in progress.'
-              : 'Scores will appear here once the API has data for this tab.'}
-          </p>
+          <p className="empty-sub">Check other tabs or refresh in a moment.</p>
         </div>
       ) : (
         <div className="match-list">

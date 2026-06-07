@@ -67,7 +67,9 @@ NEXT_PUBLIC_SITE_URL=https://cricketfastliveline.in
 ## Deploy
 
 ### Backend (Railway)
-`CRICAPI_KEY`, `UPSTASH_REDIS_URL`, optional `DATABASE_URL`
+- **Node 22+** required (pnpm 11 uses `node:sqlite`; Dockerfile uses `node:22-alpine`)
+- Env: `CRICAPI_KEY`, `UPSTASH_REDIS_URL`, optional `DATABASE_URL` (Supabase Postgres for favorites)
+- Scores cache in **Upstash Redis** (`matches:all:backup`, 7-day TTL) — survives CricAPI cooldowns after first successful fetch
 
 ### Web (Vercel) — **use this for cricketfastliveline.in**
 1. Root directory: `apps/web`

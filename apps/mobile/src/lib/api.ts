@@ -29,16 +29,24 @@ async function api<T extends { success: boolean }>(path: string, init?: RequestI
   }
 }
 
+async function apiList(path: string): Promise<LiveMatchesResponse> {
+  const res = await api<LiveMatchesResponse>(path)
+  if (res.success) return res
+  return { success: true, data: [], stale: true }
+}
+
 export async function fetchLiveMatches(): Promise<LiveMatchesResponse> {
-  return api('/matches/live')
+  return apiList('/matches/live')
 }
 
 export async function fetchUpcomingMatches(): Promise<LiveMatchesResponse> {
-  return api('/matches/upcoming')
+  return apiList('/matches/upcoming')
 }
 
 export async function fetchMatchScore(matchId: string): Promise<ScorecardResponse> {
-  return api(`/match/${matchId}/score`)
+  const res = await api<ScorecardResponse>(`/match/${matchId}/score`)
+  if (res.success) return res
+  return { success: false, data: undefined as unknown as ScorecardResponse['data'], stale: true }
 }
 
 export async function fetchMatchSquad(matchId: string) {
@@ -62,7 +70,7 @@ export async function fetchSeriesList() {
 }
 
 export async function fetchRecentMatches() {
-  return api<LiveMatchesResponse>('/matches/recent')
+  return apiList('/matches/recent')
 }
 
 export async function getFavoritesRemote(deviceId: string) {

@@ -11,6 +11,7 @@ import seriesRoute from './routes/series'
 import favoritesRoute from './routes/favorites'
 import devicesRoute from './routes/devices'
 import { initStoreRedis, rebuildMatchFanIndex } from './services/store'
+import { warmCaches } from './services/cacheWarmer'
 import { startWicketWatcher } from './services/wicketWatcher'
 
 const redisUrl = process.env.UPSTASH_REDIS_URL
@@ -54,7 +55,21 @@ async function start() {
   app.register(favoritesRoute)
   app.register(devicesRoute)
 
+  warmCaches(redis, app.log).catch(() => {})
   startWicketWatcher(redis, app.log)
+
+  app.get('/', async () => ({
+    service: 'CricketFast API',
+    status: 'ok',
+    docs: {
+      health: '/health',
+      live: '/matches/live',
+      recent: '/matches/recent',
+      upcoming: '/matches/upcoming',
+      score: '/match/:id/score',
+      series: '/series',
+    },
+  }))
 
   app.get('/health', async () => ({
     status: 'ok',

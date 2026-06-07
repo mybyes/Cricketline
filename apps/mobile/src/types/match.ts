@@ -31,4 +31,5 @@ export interface LiveMatchesResponse {
   data: Match[]
   error?: string
   stale?: boolean
+  cachedAt?: number
 }

@@ -9,12 +9,12 @@ import { MatchCard } from '../components/MatchCard'
 import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
 import { StaleBanner } from '../components/StaleBanner'
 import { useFavorites } from '../context/FavoritesContext'
+import { staleNotice } from '../lib/cacheTime'
 import { fetchLiveMatches, fetchRecentMatches, fetchUpcomingMatches } from '../lib/api'
 import {
-  friendlyLimitMessage,
   hydrateHomeFromFavorites,
-  isBlockedError,
   loadHomeCache,
+  mergeMatchList,
   saveHomeCache,
 } from '../lib/matchCache'
 import type { Match, RootStackParamList } from '../types/match'
@@ -36,12 +36,12 @@ export function HomeScreen() {
   const [stale, setStale] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const bootstrapped = useRef(false)
-
-  const applyFeed = useCallback((nextLive: Match[], nextRecent: Match[], nextUpcoming: Match[]) => {
-    setLive(nextLive)
-    setRecent(nextRecent)
-    setUpcoming(nextUpcoming)
-  }, [])
+  const liveRef = useRef(live)
+  const recentRef = useRef(recent)
+  const upcomingRef = useRef(upcoming)
+  liveRef.current = live
+  recentRef.current = recent
+  upcomingRef.current = upcoming
 
   const load = useCallback(async (opts?: { pull?: boolean; silent?: boolean }) => {
     const pull = opts?.pull ?? false
@@ -55,66 +55,64 @@ export function HomeScreen() {
       fetchUpcomingMatches(),
     ])
 
-    const err = l.error ?? r.error ?? u.error
-    const anyOk = l.success || r.success || u.success
-    const isStale = !!(l.stale || r.stale || u.stale) || !anyOk
+    const disk = await loadHomeCache()
+    const prevLive = liveRef.current.length ? liveRef.current : (disk?.live ?? [])
+    const prevRecent = recentRef.current.length ? recentRef.current : (disk?.recent ?? [])
+    const prevUpcoming = upcomingRef.current.length ? upcomingRef.current : (disk?.upcoming ?? [])
+    const nextLive = mergeMatchList(l.data, prevLive)
+    const nextRecent = mergeMatchList(r.data, prevRecent)
+    const nextUpcoming = mergeMatchList(u.data, prevUpcoming)
 
-    if (anyOk) {
-      const prev = await loadHomeCache()
-      const nextLive = l.success ? (l.data ?? []) : (prev?.live ?? [])
-      const nextRecent = r.success ? (r.data ?? []) : (prev?.recent ?? [])
-      const nextUpcoming = u.success ? (u.data ?? []) : (prev?.upcoming ?? [])
-      applyFeed(nextLive, nextRecent, nextUpcoming)
-      await saveHomeCache(nextLive, nextRecent, nextUpcoming)
-      setStale(isStale)
-      setNotice(isStale ? friendlyLimitMessage(err) : null)
-    } else {
-      let cached = await loadHomeCache()
-      if (!cached?.live.length && !cached?.recent.length && !cached?.upcoming.length) {
-        const fromFav = await hydrateHomeFromFavorites()
-        if (fromFav.live.length || fromFav.recent.length || fromFav.upcoming.length) {
-          cached = { ...fromFav, savedAt: Date.now() }
-        }
-      }
-      if (cached && (cached.live.length || cached.recent.length || cached.upcoming.length)) {
-        applyFeed(cached.live, cached.recent, cached.upcoming)
+    const hasRows = nextLive.length + nextRecent.length + nextUpcoming.length > 0
+
+    if (!hasRows) {
+      const fromFav = await hydrateHomeFromFavorites()
+      if (fromFav.live.length || fromFav.recent.length || fromFav.upcoming.length) {
+        setLive(fromFav.live)
+        setRecent(fromFav.recent)
+        setUpcoming(fromFav.upcoming)
         setStale(true)
-        setNotice(friendlyLimitMessage(err))
-      } else {
-        setStale(true)
-        setNotice(err ?? 'Could not load scores')
+        setNotice(staleNotice(disk?.savedAt))
+        setLoading(false)
+        setRefreshing(false)
+        return
       }
     }
 
+    setLive(nextLive)
+    setRecent(nextRecent)
+    setUpcoming(nextUpcoming)
+
+    if (hasRows) await saveHomeCache(nextLive, nextRecent, nextUpcoming)
+
+    const usedDisk = (l.data.length === 0 && nextLive.length > 0)
+      || (r.data.length === 0 && nextRecent.length > 0)
+      || (u.data.length === 0 && nextUpcoming.length > 0)
+    const isStale = !!(l.stale || r.stale || u.stale) || usedDisk
+    const cachedAt = Math.max(l.cachedAt ?? 0, r.cachedAt ?? 0, u.cachedAt ?? 0, disk?.savedAt ?? 0)
+
+    setStale(isStale && hasRows)
+    setNotice(isStale && hasRows ? staleNotice(cachedAt || undefined) : null)
     setLoading(false)
     setRefreshing(false)
-  }, [applyFeed])
+  }, [])
 
-  // Cache-first: show last good feed immediately, then refresh in background
   useEffect(() => {
     if (bootstrapped.current) return
     bootstrapped.current = true
     ;(async () => {
       const cached = await loadHomeCache()
       if (cached && (cached.live.length || cached.recent.length || cached.upcoming.length)) {
-        applyFeed(cached.live, cached.recent, cached.upcoming)
+        setLive(cached.live)
+        setRecent(cached.recent)
+        setUpcoming(cached.upcoming)
         setStale(true)
+        setNotice(staleNotice(cached.savedAt))
         setLoading(false)
-        await load({ silent: true })
-        return
       }
-      const fromFav = await hydrateHomeFromFavorites()
-      if (fromFav.live.length || fromFav.recent.length || fromFav.upcoming.length) {
-        applyFeed(fromFav.live, fromFav.recent, fromFav.upcoming)
-        setStale(true)
-        setNotice('Showing your saved matches — live feed is paused')
-        setLoading(false)
-        await load({ silent: true })
-        return
-      }
-      await load({ silent: false })
+      await load({ silent: !!cached })
     })()
-  }, [applyFeed, load])
+  }, [load])
 
   useEffect(() => {
     const ms = stale ? POLL_STALE_MS : POLL_LIVE_MS
@@ -143,7 +141,7 @@ export function HomeScreen() {
         />
       )) : (
         <Text style={styles.sectionEmpty}>
-          {title === 'Live now' ? 'No live matches in cache' : `Nothing in ${title.toLowerCase()} right now`}
+          {title === 'Live now' ? 'No live matches right now' : `Nothing here yet`}
         </Text>
       )}
     </View>
@@ -151,7 +149,6 @@ export function HomeScreen() {
 
   const matchCount = live.length + recent.length + upcoming.length
   const showSkeleton = loading && !refreshing && matchCount === 0
-  const feedPaused = stale && notice && (isBlockedError(notice) || matchCount === 0)
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -176,8 +173,8 @@ export function HomeScreen() {
         >
           {stale && notice && <View style={styles.bannerWrap}><StaleBanner message={notice} /></View>}
 
-          {feedPaused && (
-            <FeedPausedCard message={notice ?? undefined} onRetry={() => load({ pull: true })} />
+          {matchCount === 0 && !loading && (
+            <FeedPausedCard onRetry={() => load({ pull: true })} />
           )}
 
           {renderSection('Live now', live)}
@@ -186,13 +183,10 @@ export function HomeScreen() {
 
           {matchCount === 0 && !loading && (
             <View style={styles.hintBox}>
-              <Text style={styles.hintTitle}>While you wait</Text>
-              <Text style={styles.hintBody}>
-                Star matches to keep them on this screen even when the live API is blocked.
-                Try the Fixtures tab or pull down to refresh.
-              </Text>
+              <Text style={styles.hintTitle}>Tip</Text>
+              <Text style={styles.hintBody}>Star matches to keep them on this screen. Pull down to refresh.</Text>
               <Pressable onPress={() => navigation.getParent()?.navigate('Upcoming' as never)} style={styles.hintLink}>
-                <Text style={styles.hintLinkText}>Open Fixtures →</Text>
+                <Text style={styles.hintLinkText}>Browse fixtures →</Text>
               </Pressable>
             </View>
           )}

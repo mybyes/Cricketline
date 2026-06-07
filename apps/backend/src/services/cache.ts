@@ -1,11 +1,11 @@
 import { Redis } from 'ioredis'
-import type { FastifyInstance } from 'fastify'
+import type { Match } from './cricapi'
 
 const LIVE_MATCHES_TTL = 15
 const SCORECARD_TTL    = 12
 const SCHEDULE_TTL     = 600
 const RECENT_TTL       = 600
-const BACKUP_TTL       = 21_600 // 6h — survive CricAPI rate limits
+const BACKUP_TTL       = 604_800 // 7d — outlive CricAPI cooldowns
 const SQUAD_TTL        = 600
 const BBB_TTL          = 12
 const HISTORY_TTL      = 300
@@ -13,37 +13,147 @@ const SERIES_LIST_TTL  = 600
 const SERIES_TABLE_TTL = 300
 const ALL_MATCHES_TTL  = 300
 
+type CacheBlob<T> = { v: T; at: number }
+
+function wrap<T>(data: T): string {
+  return JSON.stringify({ v: data, at: Date.now() } satisfies CacheBlob<T>)
+}
+
+function parseEntry<T>(raw: string): { data: T; cachedAt: number } {
+  const parsed = JSON.parse(raw) as CacheBlob<T> | T
+  if (parsed && typeof parsed === 'object' && 'v' in parsed && 'at' in parsed) {
+    return { data: (parsed as CacheBlob<T>).v, cachedAt: (parsed as CacheBlob<T>).at }
+  }
+  return { data: parsed as T, cachedAt: Date.now() }
+}
+
+/** Never treat empty arrays/objects as worth storing over existing backup */
+function isNonempty(data: unknown): boolean {
+  if (data == null) return false
+  if (Array.isArray(data)) return data.length > 0
+  if (typeof data === 'object') return Object.keys(data as object).length > 0
+  return true
+}
+
+async function readBackup<T>(redis: Redis, key: string): Promise<{ data: T; cachedAt: number } | null> {
+  const raw = await redis.get(`${key}:backup`)
+  if (!raw) return null
+  const entry = parseEntry<T>(raw)
+  return isNonempty(entry.data) ? entry : null
+}
+
+async function writeCache<T>(redis: Redis, key: string, ttl: number, data: T) {
+  const blob = wrap(data)
+  await redis.setex(key, ttl, blob)
+  if (isNonempty(data)) {
+    await redis.setex(`${key}:backup`, BACKUP_TTL, blob)
+  }
+}
+
+export type CacheResult<T> = { data: T; stale: boolean; cachedAt: number }
+
+/** Read-through cache: primary → live fetch → backup (never wipes good data with empty) */
 export async function cached<T>(
   redis: Redis,
   key: string,
   ttl: number,
-  fetcher: () => Promise<T>
-): Promise<T> {
-  const hit = await redis.get(key)
-  if (hit) return JSON.parse(hit) as T
+  fetcher: () => Promise<T>,
+): Promise<CacheResult<T>> {
+  const primary = await redis.get(key)
+  if (primary) {
+    const entry = parseEntry<T>(primary)
+    if (isNonempty(entry.data)) {
+      return { data: entry.data, stale: false, cachedAt: entry.cachedAt }
+    }
+    const backup = await readBackup<T>(redis, key)
+    if (backup) return { data: backup.data, stale: true, cachedAt: backup.cachedAt }
+    return { data: entry.data, stale: false, cachedAt: entry.cachedAt }
+  }
 
-  const fresh = await fetcher()
-  const json = JSON.stringify(fresh)
-  await redis.setex(key, ttl, json)
-  await redis.setex(`${key}:backup`, BACKUP_TTL, json)
-  return fresh
+  try {
+    const fresh = await fetcher()
+    await writeCache(redis, key, ttl, fresh)
+    if (isNonempty(fresh)) {
+      return { data: fresh, stale: false, cachedAt: Date.now() }
+    }
+    const backup = await readBackup<T>(redis, key)
+    if (backup) return { data: backup.data, stale: true, cachedAt: backup.cachedAt }
+    return { data: fresh, stale: false, cachedAt: Date.now() }
+  } catch {
+    const backup = await readBackup<T>(redis, key)
+    if (backup) return { data: backup.data, stale: true, cachedAt: backup.cachedAt }
+    throw new Error('upstream_unavailable')
+  }
 }
 
-export async function readCache<T>(redis: Redis, key: string): Promise<T | null> {
-  const hit = await redis.get(key) ?? await redis.get(`${key}:backup`)
-  return hit ? (JSON.parse(hit) as T) : null
+export async function readCache<T>(redis: Redis, key: string): Promise<{ data: T; cachedAt: number } | null> {
+  const raw = await redis.get(key) ?? await redis.get(`${key}:backup`)
+  if (!raw) return null
+  const entry = parseEntry<T>(raw)
+  return isNonempty(entry.data) ? entry : null
 }
 
-/** Last-resort: return cached data with stale flag instead of a hard 500 */
-export async function staleResponse<T>(
+export function filterLiveMatches(all: Match[]) {
+  return all.filter((m) => m.matchStarted && !m.matchEnded)
+}
+
+export function filterUpcomingMatches(all: Match[]) {
+  return all.filter((m) => !m.matchStarted && !m.matchEnded)
+}
+
+export function filterRecentMatches(all: Match[], limit = 15) {
+  return all
+    .filter((m) => m.matchEnded)
+    .sort((a, b) => new Date(b.dateTimeGMT).getTime() - new Date(a.dateTimeGMT).getTime())
+    .slice(0, limit)
+}
+
+/** Last resort: derive a tab from the master all-matches backup */
+export async function resolveMatchListFallback(
   redis: Redis,
   key: string,
-  err: unknown,
-): Promise<{ success: true; data: T; stale: true; error: string } | null> {
+  derive: (all: Match[]) => Match[],
+): Promise<{ data: Match[]; cachedAt: number } | null> {
+  const hit = await readCache<Match[]>(redis, key)
+  if (hit) return hit
+
+  const all = await readCache<Match[]>(redis, CACHE_KEYS.allMatches())
+  if (!all) return null
+  const derived = derive(all.data)
+  if (!derived.length) return null
+  return { data: derived, cachedAt: all.cachedAt }
+}
+
+export function apiPayload<T>(result: CacheResult<T>) {
+  return {
+    success: true as const,
+    data: result.data,
+    stale: result.stale,
+    ...(result.stale ? { cachedAt: result.cachedAt } : {}),
+  }
+}
+
+export async function apiPayloadOrCache<T>(
+  redis: Redis,
+  key: string,
+  result: CacheResult<T> | null,
+  empty: T,
+  derive?: (all: Match[]) => Match[],
+) {
+  if (result) return apiPayload(result)
+
+  if (derive) {
+    const hit = await resolveMatchListFallback(redis, key, derive)
+    if (hit) {
+      return { success: true as const, data: hit.data as T, stale: true, cachedAt: hit.cachedAt }
+    }
+  }
+
   const hit = await readCache<T>(redis, key)
-  if (!hit) return null
-  const msg = err instanceof Error ? err.message : 'Upstream unavailable'
-  return { success: true, data: hit, stale: true, error: msg }
+  if (hit) {
+    return { success: true as const, data: hit.data, stale: true, cachedAt: hit.cachedAt }
+  }
+  return { success: true as const, data: empty, stale: true }
 }
 
 export const CACHE_KEYS = {
@@ -57,21 +167,6 @@ export const CACHE_KEYS = {
   allMatches:   () => 'matches:all',
   seriesList:   () => 'series:list',
   seriesTable:  (id: string) => `series:table:${id}`,
-}
-
-export async function withStaleFallback<T>(
-  redis: FastifyInstance['redis'],
-  key: string,
-  fetch: () => Promise<T>
-): Promise<{ data: T; stale?: boolean }> {
-  try {
-    const data = await fetch()
-    return { data }
-  } catch (e) {
-    const hit = await readCache<T>(redis, key)
-    if (hit) return { data: hit, stale: true }
-    throw e
-  }
 }
 
 export {

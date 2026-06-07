@@ -11,7 +11,8 @@ import { fetchLiveMatches, fetchMatchBbb, fetchMatchScore } from '../lib/api'
 import { fallOfWickets } from '../lib/partnerships'
 import { LiveBadge } from '../components/LiveBadge'
 import { StaleBanner } from '../components/StaleBanner'
-import { friendlyLimitMessage, loadScoreCache, saveScoreCache } from '../lib/matchCache'
+import { staleNotice } from '../lib/cacheTime'
+import { loadScoreCache, saveScoreCache } from '../lib/matchCache'
 import { LiveLinePanel } from '../components/LiveLinePanel'
 import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
 import { TeamAvatar } from '../components/TeamAvatar'
@@ -212,30 +213,32 @@ export function ScoreboardScreen() {
     ])
 
     if (scoreRes.success && scoreRes.data) {
-      const nextBbb = bbbRes.success && Array.isArray(bbbRes.data) ? bbbRes.data : bbb
-      setData(scoreRes.data)
+      const nextBbb = bbbRes.success && Array.isArray(bbbRes.data) && bbbRes.data.length
+        ? bbbRes.data
+        : bbb.length ? bbb : (bbbRes.data ?? [])
+      const nextData = scoreRes.data.score?.length || scoreRes.data.scorecard?.length
+        ? scoreRes.data
+        : (data ?? scoreRes.data)
+      setData(nextData)
       setBbb(nextBbb)
-      setStale(!!scoreRes.stale || !!bbbRes.stale)
-      setNotice(
-        scoreRes.stale || bbbRes.stale
-          ? friendlyLimitMessage(scoreRes.error ?? bbbRes.error)
-          : null,
-      )
+      const isStale = !!(scoreRes.stale || bbbRes.stale)
+      setStale(isStale)
+      setNotice(isStale ? staleNotice(scoreRes.cachedAt) : null)
       setError(null)
-      await saveScoreCache(matchId, scoreRes.data, nextBbb)
+      await saveScoreCache(matchId, nextData, nextBbb)
     } else {
       const cached = await loadScoreCache(matchId)
       if (cached) {
         setData(cached.data)
         setBbb(cached.bbb)
         setStale(true)
-        setNotice(friendlyLimitMessage(scoreRes.error))
+        setNotice(staleNotice(cached.savedAt))
         setError(null)
-      } else if (!data) {
-        setError(scoreRes.error ?? 'Failed to load scorecard')
-      } else {
+      } else if (data) {
         setStale(true)
-        setNotice(friendlyLimitMessage(scoreRes.error))
+        setNotice(staleNotice())
+      } else {
+        setError('Scorecard not available')
       }
     }
 
@@ -248,7 +251,25 @@ export function ScoreboardScreen() {
   }, [matchId, data, bbb])
 
   useEffect(() => {
-    load({ silent: false })
+    let cancelled = false
+    ;(async () => {
+      const cached = await loadScoreCache(matchId)
+      if (cancelled) return
+      if (cached) {
+        setData(cached.data)
+        setBbb(cached.bbb)
+        setStale(true)
+        setNotice(staleNotice(cached.savedAt))
+        setLoading(false)
+        await load({ silent: true })
+      } else {
+        await load({ silent: false })
+      }
+    })()
+    return () => { cancelled = true }
+  }, [matchId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     const poll = setInterval(() => load({ silent: true }), stale ? 45_000 : 12_000)
     return () => clearInterval(poll)
   }, [load, stale])

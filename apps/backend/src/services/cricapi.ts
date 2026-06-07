@@ -24,7 +24,8 @@ async function fetchAllMatches() {
 }
 
 export async function getAllMatchesCached(redis: Redis) {
-  return cached(redis, CACHE_KEYS.allMatches(), ALL_MATCHES_TTL, fetchAllMatches)
+  const { data } = await cached(redis, CACHE_KEYS.allMatches(), ALL_MATCHES_TTL, fetchAllMatches)
+  return data
 }
 
 /** Probed once per process — avoids burning 2 CricAPI calls when currentMatches isn't on the key. */
@@ -49,7 +50,8 @@ export async function getLiveMatches(redis: Redis) {
     const { data } = await axios.get(`${BASE}/currentMatches`, {
       params: { apikey: KEY, offset: 0 },
     })
-    if (data.status === 'success') return data.data as Match[]
+    checkResponse(data)
+    return data.data as Match[]
   }
 
   const all = await getAllMatchesCached(redis)
@@ -78,13 +80,27 @@ export async function getMatchSquad(matchId: string) {
 }
 
 export async function getMatchBbb(matchId: string) {
-  try {
-    return await cricGet<{ ballNbr: number; overNum: number; innings: number; event: string; runs: number; batsman: string; bowler: string }[]>(
-      'match_bbb',
-      { id: matchId },
-    )
-  } catch {
-    return []
+  return cricGet<{ ballNbr: number; overNum: number; innings: number; event: string; runs: number; batsman: string; bowler: string }[]>(
+    'match_bbb',
+    { id: matchId },
+  )
+}
+
+/** Minimal scorecard from a cached match row — keeps scores visible when scorecard API is down */
+export function scorecardFromMatch(m: Match) {
+  return {
+    id: m.id,
+    name: m.name,
+    matchType: m.matchType ?? 'match',
+    status: m.status,
+    venue: m.venue,
+    date: m.date,
+    teams: m.teams,
+    teamInfo: m.teamInfo ?? [],
+    score: m.score ?? [],
+    scorecard: [] as { inning: string; batting: unknown[]; bowling: unknown[] }[],
+    matchStarted: m.matchStarted,
+    matchEnded: m.matchEnded,
   }
 }
 

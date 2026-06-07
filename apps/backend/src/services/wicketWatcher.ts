@@ -10,7 +10,7 @@ const TICK_MS = 15_000
 export function startWicketWatcher(redis: Redis, log: FastifyBaseLogger) {
   const tick = async () => {
     try {
-      const live = await cached(redis, CACHE_KEYS.liveMatches(), LIVE_MATCHES_TTL, () => getLiveMatches(redis))
+      const { data: live } = await cached(redis, CACHE_KEYS.liveMatches(), LIVE_MATCHES_TTL, () => getLiveMatches(redis))
       await processWicketAlerts(redis, live, log)
     } catch (e) {
       log.warn({ err: e }, 'wicket watcher tick failed')
