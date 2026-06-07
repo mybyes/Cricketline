@@ -5,9 +5,10 @@ import { AppDownloadButton } from '@/components/AppDownloadButton'
 import { PageRefresher } from '@/components/PageRefresher'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
+import { getApiUrl } from '@/lib/apiUrl'
 import { getSiteUrl } from '@/lib/site'
 
-const API = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'
+const API = getApiUrl()
 
 export const revalidate = 12
 

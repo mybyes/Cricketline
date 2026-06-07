@@ -7,14 +7,14 @@ export function SiteHeader() {
       <div className="container header-inner">
         <div className="brand">
           <Link href="/" className="brand-link">
-            <span className="brand-icon">🏏</span>
+            <span className="brand-mark" aria-hidden>CF</span>
             <div>
-              <p className="brand-title">CricketFast Live Line</p>
-              <p className="brand-tagline">Fastest live cricket scores &amp; scorecards</p>
+              <p className="brand-title">CricketFast</p>
+              <p className="brand-tagline">Live scores &amp; live line</p>
             </div>
           </Link>
         </div>
-        <nav className="top-nav">
+        <nav className="top-nav" aria-label="Main">
           <Link href="/">Live</Link>
           <Link href="/#fixtures">Fixtures</Link>
           <Link href="/#series">Series</Link>

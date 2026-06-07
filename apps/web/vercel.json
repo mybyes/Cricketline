@@ -1,5 +1,10 @@
 {
   "installCommand": "npm install -g pnpm@11.5.2 && cd ../.. && pnpm install --frozen-lockfile --filter web...",
   "buildCommand": "pnpm build",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "env": {
+    "API_URL": "https://backend-production-233f.up.railway.app",
+    "NEXT_PUBLIC_API_URL": "https://backend-production-233f.up.railway.app",
+    "NEXT_PUBLIC_SITE_URL": "https://cricketfastliveline.in"
+  }
 }

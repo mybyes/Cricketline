@@ -17,7 +17,7 @@ const faqJsonLd = {
       name: 'What is live line, session and scorecard?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'The CricketFast mobile app includes 8 match tabs: Live Line, Session, Rates, Scorecard, History, Squad, Table and Info.',
+        text: 'The CricketFast mobile app includes 9 match tabs: Live Line, Session, Rates, Win %, Scorecard, History, Squad, Table and Info.',
       },
     },
     {
@@ -38,9 +38,10 @@ export default async function HomePage() {
     getRecentMatches(),
     getUpcomingMatches(),
   ])
-  const series = (seriesRes.data?.length ? seriesRes.data : FALLBACK_SERIES).slice(0, 14)
+  const series = (seriesRes.data?.length ? seriesRes.data : FALLBACK_SERIES).slice(0, 12)
   const stale = liveRes.stale || recentRes.stale || upcomingRes.stale
-  const error = liveRes.error && !liveRes.data.length ? liveRes.error : undefined
+  const hasAny = liveRes.data.length + recentRes.data.length + upcomingRes.data.length > 0
+  const error = !hasAny ? (liveRes.error ?? recentRes.error ?? upcomingRes.error) : undefined
 
   return (
     <>
@@ -56,14 +57,23 @@ export default async function HomePage() {
       <SiteHeader />
       <section className="hero-banner">
         <div className="container hero-inner">
-          <div>
+          <div className="hero-copy">
             <h1 className="hero-h1">Live Cricket Scores</h1>
-            <p>Ball-by-ball scores · IPL · Tests · ODIs · T20 — free, no login</p>
+            <p className="hero-lead">Ball-by-ball updates for IPL, Tests, ODIs and T20. Free — no login.</p>
           </div>
           <div className="hero-stats">
-            <div className="hero-stat"><span>⚡</span><small>15s refresh</small></div>
-            <div className="hero-stat"><span>📊</span><small>8 app tabs</small></div>
-            <div className="hero-stat"><span>🏏</span><small>All formats</small></div>
+            <div className="hero-stat">
+              <strong>{liveRes.data.length}</strong>
+              <small>Live now</small>
+            </div>
+            <div className="hero-stat">
+              <strong>15s</strong>
+              <small>Auto refresh</small>
+            </div>
+            <div className="hero-stat">
+              <strong>Free</strong>
+              <small>No signup</small>
+            </div>
           </div>
         </div>
       </section>
@@ -77,20 +87,27 @@ export default async function HomePage() {
             stale,
             error,
           }} />
-          <div className="ad-slot">Advertisement</div>
+
           <section className="seo-block" id="download">
-            <h2>CricketFast Live Line — Fastest Cricket Scores</h2>
+            <h2>Why CricketFast?</h2>
             <p>
-              Real-time live cricket scores and scorecards for IPL, international Tests, ODIs and domestic T20.
-              Tap any match for details. Download the Android app for live line, session, match rates, squad,
-              head-to-head history and series points table.
+              Real-time cricket scores and scorecards. Tap any match for the full summary.
+              Download the Android app for live line, session breakdown, win probability, squad, head-to-head and points table.
             </p>
           </section>
+
           <section className="faq">
-            <h3>Live line, session &amp; scorecard</h3>
-            <p>Mobile app includes 8 match tabs: Live Line, Session, Rates, Scorecard, History, Squad, Table and Info.</p>
-            <h3>Free forever?</h3>
-            <p>Yes — no login, no subscription. Web and app are free.</p>
+            <h2>FAQ</h2>
+            <div className="faq-grid">
+              <div>
+                <h3>Live line &amp; session</h3>
+                <p>The app has dedicated tabs for ball-by-ball live line, powerplay/middle/death session stats, and full scorecard.</p>
+              </div>
+              <div>
+                <h3>Free forever?</h3>
+                <p>Yes — no login, no subscription. Web scores and the app are both free.</p>
+              </div>
+            </div>
           </section>
         </main>
 
@@ -102,18 +119,19 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="widget">
-            <div className="widget-head">Features</div>
+            <div className="widget-head">In the app</div>
             <div className="widget-body feature-list">
-              <p>✓ Live line &amp; ball-by-ball</p>
-              <p>✓ Session view (Tests)</p>
-              <p>✓ Squad &amp; playing XI</p>
-              <p>✓ H2H history</p>
-              <p>✓ Points table</p>
+              <p>Live line &amp; last 30 balls</p>
+              <p>Session phases (PP / middle / death)</p>
+              <p>Win % prediction</p>
+              <p>Squad &amp; points table</p>
+              <p>Swipe between tabs</p>
             </div>
           </div>
-          <div className="widget">
+          <div className="widget widget-cta">
             <div className="widget-head">Get the App</div>
             <div className="widget-body download-box">
+              <p>Deeper live line than the web — 9 tabs per match.</p>
               <AppDownloadButton />
             </div>
           </div>
