@@ -17,7 +17,7 @@ function roleColor(short: string): string {
   if (short === 'WK') return '#6a1b9a'
   if (short === 'AR') return '#1565c0'
   if (short === 'BOWL') return '#e65100'
-  if (short === 'BAT') return '#1b5e20'
+  if (short === 'BAT') return colors.score
   return colors.textDim
 }
 
