@@ -16,6 +16,9 @@ import pollRoute from './routes/poll'
 import dailyRoute from './routes/daily'
 import portalRoute from './routes/portal'
 import searchRoute from './routes/search'
+import streamRoute from './routes/stream'
+import { initRealtime, publishScores } from './services/realtime'
+import { getLiveMatches } from './services/cricapi'
 import { initStoreRedis, rebuildMatchFanIndex } from './services/store'
 import { initCommentsRedis } from './services/comments'
 import { initPollRedis } from './services/poll'
@@ -57,6 +60,7 @@ app.decorate('redis', redis)
 initStoreRedis(redis)
 initCommentsRedis(redis)
 initPollRedis(redis)
+initRealtime(redis)
 
 async function start() {
   const dbReady = await initDb()
@@ -88,9 +92,17 @@ async function start() {
   app.register(dailyRoute)
   app.register(portalRoute)
   app.register(searchRoute)
+  app.register(streamRoute)
 
   warmCaches(redis, app.log).catch(() => {})
   startWicketWatcher(redis, app.log)
+
+  // Publisher tick: every 10s, push the current live snapshot onto the event bus.
+  // (Production optimization: publish only on a detected change, and read from cache —
+  //  here we keep it simple/visible for the demo; seed mode makes it free.)
+  setInterval(async () => {
+    try { publishScores({ data: await getLiveMatches(redis), ts: Date.now() }) } catch { /* skip tick */ }
+  }, 10_000)
 
   app.get('/', async () => ({
     service: 'CricketFast API',

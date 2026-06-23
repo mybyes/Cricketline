@@ -125,6 +125,7 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
   recentRef.current = recent
   upcomingRef.current = upcoming
   const [stale, setStale] = useState(initial?.stale ?? !!boot.diskAt)
+  const [streaming, setStreaming] = useState(false)
   const [cachedLabel, setCachedLabel] = useState<string | null>(
     (initial?.stale || boot.diskAt) && (initial?.cachedAt ?? boot.diskAt)
       ? staleNotice(initial?.cachedAt ?? boot.diskAt)
@@ -163,6 +164,24 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
     return () => clearInterval(id)
   }, [load])
 
+  // Real-time push: subscribe to the SSE stream and apply live updates instantly.
+  // EventSource auto-reconnects; the 15s poll above stays as a fallback.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('EventSource' in window)) return
+    const es = new EventSource(`${API}/stream`)
+    es.addEventListener('scores', (e) => {
+      try {
+        const body = JSON.parse((e as MessageEvent).data) as { data?: Match[] }
+        if (Array.isArray(body.data) && body.data.length) {
+          setLive((prev) => mergeMatchList(body.data!, prev))
+          setStreaming(true)
+        }
+      } catch { /* ignore malformed frame */ }
+    })
+    es.onerror = () => setStreaming(false)
+    return () => es.close()
+  }, [])
+
   const list = tab === 'live' ? live : tab === 'recent' ? recent : upcoming
   const label = tab === 'live' ? 'live' : tab === 'recent' ? 'recent' : 'upcoming'
   const liveCount = live.filter((m) => m.matchStarted && !m.matchEnded).length
@@ -175,6 +194,7 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
         <div className="live-bar">
           <span className="live-dot" />
           <span>{liveCount} match{liveCount === 1 ? '' : 'es'} live now</span>
+          {streaming && <span className="live-stream">● Streaming</span>}
         </div>
       )}
 

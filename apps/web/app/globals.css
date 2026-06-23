@@ -141,6 +141,7 @@ h1, h2, h3, .num { font-family: var(--display); letter-spacing: -.02em; }
   box-shadow: var(--shadow);
 }
 .live-bar-hint { margin-left: auto; font-size: .72rem; font-weight: 600; color: var(--muted); }
+.live-stream { margin-left: auto; font-size: .68rem; font-weight: 800; letter-spacing: .04em; color: var(--accent); background: rgba(20,194,114,.12); border: 1px solid rgba(20,194,114,.3); padding: 2px 9px; border-radius: 20px; }
 .live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--live); animation: pulse 1.5s infinite; flex-shrink: 0; }
 @keyframes pulse { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:.5; transform:scale(.9)} }
 
