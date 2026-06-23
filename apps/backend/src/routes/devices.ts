@@ -12,8 +12,9 @@ export default async function devicesRoute(app: FastifyInstance) {
     try {
       await savePushToken(device_id, push_token, platform)
       return { success: true }
-    } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+    } catch (e) {
+      req.log.error({ err: e }, 'device register error')
+      reply.status(500).send({ success: false, error: 'Service unavailable' })
     }
   })
 }

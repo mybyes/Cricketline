@@ -3,9 +3,10 @@ import { getMatchBbb, getMatchHistory, getMatchSquad } from '../services/cricapi
 import {
   apiPayload, apiPayloadOrCache, cached, CACHE_KEYS, SQUAD_TTL, BBB_TTL, HISTORY_TTL,
 } from '../services/cache'
+import { validateIdParam } from '../lib/validateId'
 
 export default async function matchExtrasRoute(app: FastifyInstance) {
-  app.get<{ Params: { id: string } }>('/match/:id/squad', async (req, reply) => {
+  app.get<{ Params: { id: string } }>('/match/:id/squad', { preHandler: validateIdParam }, async (req, reply) => {
     const { id } = req.params
     const key = CACHE_KEYS.squad(id)
     try {
@@ -17,7 +18,7 @@ export default async function matchExtrasRoute(app: FastifyInstance) {
     }
   })
 
-  app.get<{ Params: { id: string } }>('/match/:id/bbb', async (req, reply) => {
+  app.get<{ Params: { id: string } }>('/match/:id/bbb', { preHandler: validateIdParam }, async (req, reply) => {
     const { id } = req.params
     const key = CACHE_KEYS.bbb(id)
     try {
@@ -29,7 +30,7 @@ export default async function matchExtrasRoute(app: FastifyInstance) {
     }
   })
 
-  app.get<{ Params: { id: string } }>('/match/:id/history', async (req, reply) => {
+  app.get<{ Params: { id: string } }>('/match/:id/history', { preHandler: validateIdParam }, async (req, reply) => {
     const { id } = req.params
     const key = CACHE_KEYS.history(id)
     try {

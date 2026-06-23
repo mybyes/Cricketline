@@ -8,6 +8,7 @@ import {
   readCache,
   SCORECARD_TTL,
 } from '../services/cache'
+import { validateIdParam } from '../lib/validateId'
 
 async function scoreFromAllMatches(redis: FastifyInstance['redis'], matchId: string) {
   const all = await readCache<Match[]>(redis, CACHE_KEYS.allMatches())
@@ -17,7 +18,7 @@ async function scoreFromAllMatches(redis: FastifyInstance['redis'], matchId: str
 }
 
 export default async function scoreRoute(app: FastifyInstance) {
-  app.get<{ Params: { id: string } }>('/match/:id/score', async (req, reply) => {
+  app.get<{ Params: { id: string } }>('/match/:id/score', { preHandler: validateIdParam }, async (req, reply) => {
     const { id } = req.params
     const key = CACHE_KEYS.scorecard(id)
     try {

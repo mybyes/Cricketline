@@ -12,7 +12,7 @@ export async function initDb() {
   if (!DATABASE_URL || DATABASE_URL.includes('your_database_url_here')) return false
 
   try {
-    sql = postgres(DATABASE_URL, { max: 5 })
+    sql = postgres(DATABASE_URL, { max: 20, idle_timeout: 20, connect_timeout: 10 })
 
     await sql`
       CREATE TABLE IF NOT EXISTS favorites (
@@ -32,6 +32,18 @@ export async function initDb() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `
+    await sql`
+      CREATE TABLE IF NOT EXISTS match_comments (
+        id TEXT PRIMARY KEY,
+        match_id TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        text TEXT NOT NULL,
+        flags INT NOT NULL DEFAULT 0,
+        hidden BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `
+    await sql`CREATE INDEX IF NOT EXISTS idx_comments_match ON match_comments (match_id, created_at DESC)`
     return true
   } catch (e) {
     console.error('PostgreSQL unavailable — falling back to Redis:', e)

@@ -54,6 +54,14 @@ async function writeCache<T>(redis: Redis, key: string, ttl: number, data: T) {
 
 export type CacheResult<T> = { data: T; stale: boolean; cachedAt: number }
 
+/**
+ * When true, `cached()` ignores Redis and always returns the fetcher result fresh.
+ * Used in seed/demo mode so the built-in dataset is never shadowed by stale real data
+ * left in Redis from a previous live run.
+ */
+let bypassCache = false
+export function setCacheBypass(on: boolean) { bypassCache = on }
+
 async function upstreamInBackoff(redis: Redis) {
   return !!(await redis.get(UPSTREAM_BACKOFF_KEY))
 }
@@ -86,6 +94,9 @@ export async function cached<T>(
   ttl: number,
   fetcher: () => Promise<T>,
 ): Promise<CacheResult<T>> {
+  if (bypassCache) {
+    return { data: await fetcher(), stale: false, cachedAt: Date.now() }
+  }
   const primary = await redis.get(key)
   if (primary) {
     const entry = parseEntry<T>(primary)

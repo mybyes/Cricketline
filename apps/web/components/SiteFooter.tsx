@@ -10,11 +10,14 @@ export function SiteFooter() {
         </div>
         <div>
           <strong>Quick Links</strong>
-          <p><a href="/">Live Scores</a> · <a href="/#fixtures">Fixtures</a> · <a href="/#series">Series</a></p>
+          <p>
+            <a href="/live">Live Scores</a> · <a href="/matches">Matches</a> · <a href="/series">Series</a> · <a href="/fixtures">Fixtures</a>
+            <br /><a href="/results">Results</a> · <a href="/rankings">Rankings</a> · <a href="/teams">Teams</a>
+          </p>
         </div>
         <div>
           <strong>Get the App</strong>
-          <p>Live line, session, squad, history, table — 8 match tabs</p>
+          <p>Faster live line on Android.</p>
           <AppDownloadButton />
         </div>
       </div>

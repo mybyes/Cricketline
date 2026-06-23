@@ -3,6 +3,7 @@ import { getSeriesList, getSeriesTable } from '../services/cricapi'
 import {
   apiPayload, apiPayloadOrCache, cached, CACHE_KEYS, SERIES_LIST_TTL, SERIES_TABLE_TTL,
 } from '../services/cache'
+import { validateIdParam } from '../lib/validateId'
 
 export default async function seriesRoute(app: FastifyInstance) {
   app.get('/series', async (req, reply) => {
@@ -16,7 +17,7 @@ export default async function seriesRoute(app: FastifyInstance) {
     }
   })
 
-  app.get<{ Params: { id: string } }>('/series/:id/table', async (req, reply) => {
+  app.get<{ Params: { id: string } }>('/series/:id/table', { preHandler: validateIdParam }, async (req, reply) => {
     const { id } = req.params
     const key = CACHE_KEYS.seriesTable(id)
     try {

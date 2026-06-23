@@ -4,14 +4,13 @@ import { getSiteUrl } from '@/lib/site'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const site = getSiteUrl()
-  const entries: MetadataRoute.Sitemap = [
-    {
-      url: site,
-      lastModified: new Date(),
-      changeFrequency: 'always',
-      priority: 1,
-    },
-  ]
+  const staticPaths = ['', '/live', '/matches', '/series', '/fixtures', '/results', '/rankings', '/teams']
+  const entries: MetadataRoute.Sitemap = staticPaths.map((p) => ({
+    url: `${site}${p}`,
+    lastModified: new Date(),
+    changeFrequency: p === '' || p === '/live' ? 'always' : 'daily',
+    priority: p === '' ? 1 : 0.8,
+  }))
 
   try {
     const [live, recent] = await Promise.all([getLiveMatches(), getRecentMatches()])

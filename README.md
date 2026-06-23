@@ -33,9 +33,18 @@ pnpm dev:mobile     # Expo — press w for browser
 pnpm dev:web        # :3001 Next.js portal
 ```
 
+### Demo / no-key mode
+
+Set `SEED_DATA=1` (or simply leave `CRICAPI_KEY` unset) and the backend serves a built-in
+dataset — 2 live matches, results, fixtures, full scorecards and ball-by-ball — so the whole
+app runs and demos without any API key. Flip to live data at the end by setting a real
+`CRICAPI_KEY` and `SEED_DATA=0`. The mobile app and web read the same backend, so both pick it
+up automatically (point mobile at the seed backend via `EXPO_PUBLIC_API_URL`, or run `expo start`
+in dev which uses `localhost:3000`).
+
 ### Env
 
-`apps/backend/.env` — `CRICAPI_KEY`, `UPSTASH_REDIS_URL`
+`apps/backend/.env` — `CRICAPI_KEY` (or `CRICAPI_KEYS`, a comma-separated pool that auto-rotates when one key hits its daily quota), `UPSTASH_REDIS_URL`
 
 `apps/mobile/.env`:
 ```
@@ -65,6 +74,8 @@ NEXT_PUBLIC_SITE_URL=https://cricketfastliveline.in
 | `GET /favorites?device_id=` | Saved matches |
 
 ## Deploy
+
+> Full step-by-step runbook (data plans, Vercel domain swap, EAS build/submit): see [DEPLOY.md](DEPLOY.md).
 
 ### Backend (Railway)
 - **Node 22+** required (pnpm 11 uses `node:sqlite`; Dockerfile uses `node:22-alpine`)

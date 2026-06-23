@@ -1,26 +1,121 @@
 import axios from 'axios'
 import type { Redis } from 'ioredis'
-import { cached, CACHE_KEYS, ALL_MATCHES_TTL } from './cache'
+import { cached, CACHE_KEYS, ALL_MATCHES_TTL, setCacheBypass } from './cache'
+import { SEED_MATCHES, SEED_SCORECARDS, SEED_BBB, SEED_SQUADS } from '../data/seed'
+import { CRICBUZZ_ENABLED, fetchCricbuzzMatches } from './cricbuzzSource'
 
 const BASE = 'https://api.cricapi.com/v1'
-const KEY  = process.env.CRICAPI_KEY!
 
-function checkResponse(data: { status?: string; reason?: string; message?: string }) {
-  if (data.status !== 'success') {
-    throw new Error(data.reason ?? data.message ?? 'CricAPI error')
-  }
+/**
+ * Key pool. Supports a comma-separated CRICAPI_KEYS list (preferred) and falls
+ * back to the legacy single CRICAPI_KEY. Each key has its own daily quota, so
+ * rotating to the next key when one is exhausted multiplies the free-tier limit
+ * and provides a fallback source without changing providers.
+ */
+const KEYS: string[] = [
+  ...(process.env.CRICAPI_KEYS ?? '').split(','),
+  process.env.CRICAPI_KEY ?? '',
+]
+  .map((k) => k.trim())
+  .filter(Boolean)
+  .filter((k, i, arr) => arr.indexOf(k) === i)
+
+/**
+ * Seed/demo mode — serve the built-in dataset instead of calling CricAPI. Active when
+ * no key is configured (keyless build) or when SEED_DATA=1 forces it. Lets the whole app
+ * run and demo without live data; flip to live by setting a CRICAPI_KEY and unsetting SEED_DATA.
+ */
+export const SEED_MODE =
+  process.env.SEED_DATA === '1' || process.env.SEED_DATA === 'true' || KEYS.length === 0
+
+// In seed mode, never let stale real data in Redis shadow the built-in dataset.
+setCacheBypass(SEED_MODE)
+
+/** In-memory map: key → epoch ms until which the key is treated as quota-exhausted. */
+const exhaustedUntil = new Map<string, number>()
+
+/** CricAPI quotas reset daily (UTC). Park an exhausted key until the next UTC midnight. */
+function nextUtcReset(): number {
+  const now = new Date()
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0)
 }
 
+type CricResponse = {
+  status?: string
+  reason?: string
+  message?: string
+  data?: unknown
+  info?: { hitsToday?: number; hitsLimit?: number; credits?: number }
+}
+
+/** Daily-hit limit reached (or out of credits) — rotate to the next key rather than failing. */
+function isQuotaError(data: CricResponse): boolean {
+  const info = data.info
+  if (info && typeof info.hitsLimit === 'number' && typeof info.hitsToday === 'number' && info.hitsToday >= info.hitsLimit) {
+    return true
+  }
+  if (info && info.credits === 0) return true
+  const reason = (data.reason ?? data.message ?? '').toLowerCase()
+  return reason.includes('hits') || reason.includes('limit') || reason.includes('quota') || reason.includes('credit')
+}
+
+/**
+ * Request the CricAPI, rotating through the key pool. A key that hits its daily
+ * quota is parked until the next UTC reset; only when every key is exhausted (or
+ * the network is down) does this throw — letting the cache layer serve stale data.
+ */
 async function cricGet<T>(path: string, params: Record<string, string | number> = {}): Promise<T> {
-  const { data } = await axios.get(`${BASE}/${path}`, {
-    params: { apikey: KEY, ...params },
-  })
-  checkResponse(data)
-  return data.data as T
+  if (KEYS.length === 0) throw new Error('CricAPI: no API key configured')
+
+  const now = Date.now()
+  const fresh = KEYS.filter((k) => (exhaustedUntil.get(k) ?? 0) <= now)
+  // If all keys look exhausted, still retry the full set — the daily reset may have passed.
+  const order = fresh.length > 0 ? fresh : KEYS
+
+  let lastError: Error = new Error('CricAPI: all keys exhausted')
+  for (const key of order) {
+    try {
+      const { data } = await axios.get<CricResponse>(`${BASE}/${path}`, {
+        params: { apikey: key, ...params },
+        timeout: 10_000,
+      })
+      if (data.status === 'success') {
+        exhaustedUntil.delete(key)
+        return data.data as T
+      }
+      if (isQuotaError(data)) {
+        // Park this key until the daily reset, then try the next one.
+        exhaustedUntil.set(key, nextUtcReset())
+      }
+      // Any non-success (quota, invalid key, bad id) — record and try the next key.
+      // If it's a genuine per-request error (e.g. bad id) every key returns the
+      // same thing and the last error is surfaced after the pool is exhausted.
+      lastError = new Error(data.reason ?? data.message ?? 'CricAPI error')
+    } catch (err) {
+      // Network/timeout error: remember it and try the next key.
+      lastError = err instanceof Error ? err : new Error(String(err))
+    }
+  }
+  throw lastError
+}
+
+/** True when every configured key is currently parked as quota-exhausted. */
+export function allKeysExhausted(): boolean {
+  if (KEYS.length === 0) return true
+  const now = Date.now()
+  return KEYS.every((k) => (exhaustedUntil.get(k) ?? 0) > now)
 }
 
 async function fetchAllMatches() {
-  return cricGet<Match[]>('matches', { offset: 0 })
+  if (SEED_MODE) return SEED_MATCHES
+  try {
+    const primary = await cricGet<Match[]>('matches', { offset: 0 })
+    if (primary.length || !CRICBUZZ_ENABLED) return primary
+  } catch (err) {
+    if (!CRICBUZZ_ENABLED) throw err
+  }
+  // Primary empty or failed → fall back to the secondary source (Cricbuzz via RapidAPI).
+  return fetchCricbuzzMatches()
 }
 
 export async function getAllMatchesCached(redis: Redis) {
@@ -28,30 +123,35 @@ export async function getAllMatchesCached(redis: Redis) {
   return data
 }
 
-/** Probed once per process — avoids burning 2 CricAPI calls when currentMatches isn't on the key. */
+/**
+ * Whether the key supports the richer `currentMatches` endpoint. Cached only on a
+ * definitive answer — a quota-blocked probe returns `null` so we retry later rather
+ * than permanently downgrading to the all-matches filter for the process lifetime.
+ */
 let useCurrentMatches: boolean | null = null
 
-async function resolveCurrentMatchesEndpoint(): Promise<boolean> {
-  if (useCurrentMatches !== null) return useCurrentMatches
+async function tryCurrentMatches(): Promise<Match[] | null> {
   try {
-    const { data } = await axios.get(`${BASE}/currentMatches`, {
-      params: { apikey: KEY, offset: 0 },
-      timeout: 8_000,
-    })
-    useCurrentMatches = data.status === 'success' && Array.isArray(data.data)
+    return await cricGet<Match[]>('currentMatches', { offset: 0 })
   } catch {
-    useCurrentMatches = false
+    return null
   }
-  return useCurrentMatches
 }
 
 export async function getLiveMatches(redis: Redis) {
-  if (await resolveCurrentMatchesEndpoint()) {
-    const { data } = await axios.get(`${BASE}/currentMatches`, {
-      params: { apikey: KEY, offset: 0 },
-    })
-    checkResponse(data)
-    return data.data as Match[]
+  if (SEED_MODE) {
+    return SEED_MATCHES.filter((m) => m.matchStarted && !m.matchEnded)
+  }
+  if (useCurrentMatches !== false) {
+    const current = await tryCurrentMatches()
+    if (current && Array.isArray(current)) {
+      useCurrentMatches = true
+      return current
+    }
+    // Only downgrade permanently when the endpoint genuinely isn't on this key
+    // (i.e. some key still had quota but the call failed). If everything is just
+    // quota-exhausted, leave the flag unset so we re-probe after the daily reset.
+    if (!allKeysExhausted()) useCurrentMatches = false
   }
 
   const all = await getAllMatchesCached(redis)
@@ -72,14 +172,23 @@ export async function getRecentMatches(redis: Redis, limit = 15) {
 }
 
 export async function getMatchScore(matchId: string) {
+  if (SEED_MODE) {
+    const sc = SEED_SCORECARDS[matchId]
+    if (sc) return sc
+    const m = SEED_MATCHES.find((x) => x.id === matchId)
+    if (m) return scorecardFromMatch(m)
+    throw new Error('seed: scorecard not found')
+  }
   return cricGet('match_scorecard', { id: matchId })
 }
 
 export async function getMatchSquad(matchId: string) {
+  if (SEED_MODE) return SEED_SQUADS[matchId] ?? []
   return cricGet('match_squad', { id: matchId })
 }
 
 export async function getMatchBbb(matchId: string) {
+  if (SEED_MODE) return SEED_BBB[matchId] ?? []
   return cricGet<{ ballNbr: number; overNum: number; innings: number; event: string; runs: number; batsman: string; bowler: string }[]>(
     'match_bbb',
     { id: matchId },
@@ -139,6 +248,12 @@ export function buildMatchHistory(matchId: string, all: Match[]) {
 }
 
 export async function getSeriesList(limit = 12) {
+  if (SEED_MODE) {
+    return [
+      { id: 'seed-series', name: 'Indian Premier League 2026', startDate: '2026-05-01', endDate: '2026-06-30', odi: 0, t20: 1, test: 0 },
+      { id: 'seed-series-2', name: 'England tour of India 2026', startDate: '2026-06-10', endDate: '2026-07-05', odi: 0, t20: 0, test: 1 },
+    ].slice(0, limit)
+  }
   const data = await cricGet<{ id: string; name: string; startDate: string; endDate: string; odi: number; t20: number; test: number }[]>(
     'series',
     { offset: 0 },
@@ -147,6 +262,30 @@ export async function getSeriesList(limit = 12) {
 }
 
 export async function getSeriesTable(seriesId: string) {
+  if (SEED_MODE) {
+    const ended = SEED_MATCHES.filter((m) => m.matchEnded)
+    const runs = new Map<string, { name: string; runs: number; balls: number }>()
+    const wkts = new Map<string, { name: string; wkts: number; runs: number }>()
+    for (const sc of Object.values(SEED_SCORECARDS)) {
+      for (const inn of sc.scorecard) {
+        for (const b of inn.batting) {
+          const r = runs.get(b.batsman.name) ?? { name: b.batsman.name, runs: 0, balls: 0 }
+          r.runs += b.r; r.balls += b.b; runs.set(b.batsman.name, r)
+        }
+        for (const bw of inn.bowling) {
+          const w = wkts.get(bw.bowler.name) ?? { name: bw.bowler.name, wkts: 0, runs: 0 }
+          w.wkts += bw.w; w.runs += bw.r; wkts.set(bw.bowler.name, w)
+        }
+      }
+    }
+    return {
+      seriesName: 'IPL 2026',
+      standings: buildStandingsFromMatches(ended),
+      matches: SEED_MATCHES,
+      topRuns: [...runs.values()].sort((a, b) => b.runs - a.runs).slice(0, 5),
+      topWickets: [...wkts.values()].sort((a, b) => b.wkts - a.wkts || a.runs - b.runs).slice(0, 5),
+    }
+  }
   try {
     const info = await cricGet<{
       info: { name: string; startdate: string; enddate: string }

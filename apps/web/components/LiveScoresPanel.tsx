@@ -175,7 +175,6 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
         <div className="live-bar">
           <span className="live-dot" />
           <span>{liveCount} match{liveCount === 1 ? '' : 'es'} live now</span>
-          <span className="live-bar-hint">Updates every 15s</span>
         </div>
       )}
 

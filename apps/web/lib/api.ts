@@ -38,6 +38,62 @@ export interface ApiResult<T> {
   error?: string
 }
 
+export interface BatsmanRow {
+  batsman: { id: string; name: string }
+  'dismissal-text': string
+  r: number
+  b: number
+  '4s': number
+  '6s': number
+  sr: number
+}
+
+export interface BowlerRow {
+  bowler: { id: string; name: string }
+  o: number
+  m: number
+  r: number
+  w: number
+  eco: number
+}
+
+export interface FallOfWicket { wkt: number; player: string; runs: number; over: number }
+
+export interface InningScorecard {
+  inning: string
+  batting: BatsmanRow[]
+  bowling: BowlerRow[]
+  extras?: { t: number; b?: number; lb?: number; w?: number; nb?: number; p?: number }
+  totals?: { r: number; w: number; o: number }
+  fallOfWickets?: FallOfWicket[]
+  didNotBat?: string[]
+}
+
+export interface SquadTeam {
+  team: string
+  players: { player: { id: string; name: string }; role?: string }[]
+}
+
+export function getSquad(id: string) {
+  return get<SquadTeam[]>(`/match/${id}/squad`, 300)
+}
+
+export interface ScorecardData extends Match {
+  tossWinner?: string
+  tossChoice?: string
+  scorecard: InningScorecard[]
+}
+
+export interface BbbBall {
+  ballNbr?: number
+  overNum?: number
+  innings?: number
+  event?: string
+  runs?: number
+  batsman?: string
+  bowler?: string
+}
+
 async function get<T>(path: string, revalidate = 15): Promise<ApiResult<T>> {
   try {
     const res = await fetch(`${API}${path}`, { next: { revalidate } })
@@ -72,6 +128,78 @@ export function getRecentMatches() {
 
 export function getUpcomingMatches() {
   return get<Match[]>('/matches/upcoming', 120)
+}
+
+export interface Offer {
+  id: string
+  title: string
+  brand: string
+  perk: string
+  code: string
+  category: 'fantasy' | 'tickets' | 'merch' | 'streaming'
+  ctaUrl: string | null
+  placeholder: boolean
+}
+
+export interface DailyData {
+  matchOfTheDay: Match | null
+  offers: Offer[]
+}
+
+export function getDaily() {
+  return get<DailyData>('/daily', 120)
+}
+
+export interface RankRow { rank: number; team: string; short: string; rating: number; points?: number }
+export interface PlayerRank { rank: number; name: string; team: string; rating: number }
+export interface Rankings {
+  teams: { test: RankRow[]; odi: RankRow[]; t20: RankRow[] }
+  batters: { test: PlayerRank[]; odi: PlayerRank[]; t20: PlayerRank[] }
+  bowlers: { test: PlayerRank[]; odi: PlayerRank[]; t20: PlayerRank[] }
+  updated: string
+}
+export type TeamCategory = 'international' | 'league' | 'other'
+export interface TeamSummary { name: string; short: string; matches: number; live: number; upcoming: number; category: TeamCategory }
+
+export interface SearchResults {
+  query: string
+  matches: Match[]
+  teams: { name: string; short: string }[]
+  series: { id: string; name: string }[]
+}
+
+export function search(q: string) {
+  return get<SearchResults>(`/search?q=${encodeURIComponent(q)}`, 30)
+}
+
+export function getRankings() {
+  return get<Rankings>('/rankings', 3600)
+}
+
+export function getTeams() {
+  return get<TeamSummary[]>('/teams', 600)
+}
+
+export interface SeriesStatRun { name: string; runs: number; balls: number }
+export interface SeriesStatWkt { name: string; wkts: number; runs: number }
+export interface SeriesTableFull {
+  seriesName: string
+  standings: StandingRow[]
+  matches: Match[]
+  topRuns?: SeriesStatRun[]
+  topWickets?: SeriesStatWkt[]
+}
+
+export function getSeriesTableFull(id: string) {
+  return get<SeriesTableFull>(`/series/${id}/table`, 300)
+}
+
+export function getScorecard(id: string) {
+  return get<ScorecardData>(`/match/${id}/score`, 12)
+}
+
+export function getBallByBall(id: string) {
+  return get<BbbBall[]>(`/match/${id}/bbb`, 12)
 }
 
 export function getSeriesList() {

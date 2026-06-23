@@ -8,8 +8,9 @@ export default async function favoritesRoute(app: FastifyInstance) {
     try {
       const data = await listFavorites(device_id)
       return { success: true, data }
-    } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+    } catch (e) {
+      req.log.error({ err: e }, 'favorites error')
+      reply.status(500).send({ success: false, error: 'Service unavailable' })
     }
   })
 
@@ -23,8 +24,9 @@ export default async function favoritesRoute(app: FastifyInstance) {
     try {
       await addFavorite(device_id, match_id, match_name, match_data ?? {})
       return { success: true }
-    } catch (e: any) {
-      reply.status(500).send({ success: false, error: e.message })
+    } catch (e) {
+      req.log.error({ err: e }, 'favorites error')
+      reply.status(500).send({ success: false, error: 'Service unavailable' })
     }
   })
 
