@@ -154,6 +154,62 @@ export const SEED_MATCHES: Match[] = [
     teams: ['New Zealand', 'Pakistan'],
     teamInfo: [team('New Zealand', 'NZ'), team('Pakistan', 'PAK')],
   }),
+
+  // ----- HISTORIC RESULTS (archive / form / head-to-head) -----
+  baseMatch({
+    id: 'seed-h-1', matchType: 't20', matchStarted: true, matchEnded: true,
+    name: 'Mumbai Indians vs Royal Challengers Bengaluru, 22nd Match, IPL 2026',
+    status: 'Mumbai Indians won by 7 wickets', venue: 'Wankhede Stadium, Mumbai',
+    date: '2026-06-05', dateTimeGMT: '2026-06-05T14:00:00',
+    teams: ['Mumbai Indians', 'Royal Challengers Bengaluru'],
+    teamInfo: [team('Mumbai Indians', 'MI'), team('Royal Challengers Bengaluru', 'RCB')],
+    score: [{ inning: 'Royal Challengers Bengaluru Inning', r: 178, w: 6, o: 20 }, { inning: 'Mumbai Indians Inning', r: 179, w: 3, o: 18.4 }],
+  }),
+  baseMatch({
+    id: 'seed-h-2', matchType: 'odi', matchStarted: true, matchEnded: true,
+    name: 'India vs England, 3rd ODI, England tour of India 2026',
+    status: 'India won by 4 wickets', venue: 'Eden Gardens, Kolkata',
+    date: '2026-06-02', dateTimeGMT: '2026-06-02T08:30:00',
+    teams: ['India', 'England'],
+    teamInfo: [team('India', 'IND'), team('England', 'ENG')],
+    score: [{ inning: 'England Inning', r: 289, w: 9, o: 50 }, { inning: 'India Inning', r: 292, w: 6, o: 48.5 }],
+  }),
+  baseMatch({
+    id: 'seed-h-3', matchType: 't20', matchStarted: true, matchEnded: true,
+    name: 'Chennai Super Kings vs Mumbai Indians, 18th Match, IPL 2026',
+    status: 'Chennai Super Kings won by 5 runs', venue: 'MA Chidambaram Stadium, Chennai',
+    date: '2026-05-30', dateTimeGMT: '2026-05-30T14:00:00',
+    teams: ['Chennai Super Kings', 'Mumbai Indians'],
+    teamInfo: [team('Chennai Super Kings', 'CSK'), team('Mumbai Indians', 'MI')],
+    score: [{ inning: 'Chennai Super Kings Inning', r: 192, w: 5, o: 20 }, { inning: 'Mumbai Indians Inning', r: 187, w: 8, o: 20 }],
+  }),
+  baseMatch({
+    id: 'seed-h-4', matchType: 't20', matchStarted: true, matchEnded: true,
+    name: 'Kolkata Knight Riders vs Gujarat Titans, 15th Match, IPL 2026',
+    status: 'Gujarat Titans won by 3 wickets', venue: 'Eden Gardens, Kolkata',
+    date: '2026-05-27', dateTimeGMT: '2026-05-27T14:00:00',
+    teams: ['Kolkata Knight Riders', 'Gujarat Titans'],
+    teamInfo: [team('Kolkata Knight Riders', 'KKR'), team('Gujarat Titans', 'GT')],
+    score: [{ inning: 'Kolkata Knight Riders Inning', r: 165, w: 7, o: 20 }, { inning: 'Gujarat Titans Inning', r: 166, w: 7, o: 19.5 }],
+  }),
+  baseMatch({
+    id: 'seed-h-5', matchType: 'odi', matchStarted: true, matchEnded: true,
+    name: 'Australia vs South Africa, 2nd ODI, South Africa tour of Australia 2026',
+    status: 'South Africa won by 18 runs', venue: 'Adelaide Oval, Adelaide',
+    date: '2026-06-12', dateTimeGMT: '2026-06-12T03:30:00',
+    teams: ['Australia', 'South Africa'],
+    teamInfo: [team('Australia', 'AUS'), team('South Africa', 'SA')],
+    score: [{ inning: 'South Africa Inning', r: 301, w: 8, o: 50 }, { inning: 'Australia Inning', r: 283, w: 10, o: 48.2 }],
+  }),
+  baseMatch({
+    id: 'seed-h-6', matchType: 't20', matchStarted: true, matchEnded: true,
+    name: 'Rajasthan Royals vs Punjab Kings, 12th Match, IPL 2026',
+    status: 'Rajasthan Royals won by 9 wickets', venue: 'Sawai Mansingh Stadium, Jaipur',
+    date: '2026-05-24', dateTimeGMT: '2026-05-24T14:00:00',
+    teams: ['Rajasthan Royals', 'Punjab Kings'],
+    teamInfo: [team('Rajasthan Royals', 'RR'), team('Punjab Kings', 'PBKS')],
+    score: [{ inning: 'Punjab Kings Inning', r: 156, w: 9, o: 20 }, { inning: 'Rajasthan Royals Inning', r: 157, w: 1, o: 17.2 }],
+  }),
 ]
 
 const SC_RCB_MI: SeedScorecard = {

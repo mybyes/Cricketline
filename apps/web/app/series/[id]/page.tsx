@@ -23,7 +23,11 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const matches = data?.matches ?? []
 
   return (
-    <PortalLayout title={data?.seriesName ?? 'Series'} subtitle="Standings, fixtures & results">
+    <PortalLayout
+      title={data?.seriesName ?? 'Series'}
+      subtitle="Standings, fixtures & results"
+      crumbs={[{ name: 'Home', href: '/' }, { name: 'Series', href: '/series' }, { name: data?.seriesName ?? 'Series', href: `/series/${id}` }]}
+    >
       {standings.length > 0 && (
         <>
           <h2 className="section-title">Points table</h2>

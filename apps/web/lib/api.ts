@@ -78,6 +78,17 @@ export function getSquad(id: string) {
   return get<SquadTeam[]>(`/match/${id}/squad`, 300)
 }
 
+export interface MatchHistoryData {
+  teams?: string[]
+  headToHead: Match[]
+  team1Recent: Match[]
+  team2Recent: Match[]
+}
+
+export function getMatchHistory(id: string) {
+  return get<MatchHistoryData>(`/match/${id}/history`, 300)
+}
+
 export interface ScorecardData extends Match {
   tossWinner?: string
   tossChoice?: string

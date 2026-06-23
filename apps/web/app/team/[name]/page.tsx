@@ -43,7 +43,12 @@ export default async function TeamPage({ params }: { params: Promise<{ name: str
   const played = tRecent.length
 
   return (
-    <PortalLayout title={team} subtitle="Form, fixtures, results & ranking" refresh>
+    <PortalLayout
+      title={team}
+      subtitle="Form, fixtures, results & ranking"
+      refresh
+      crumbs={[{ name: 'Home', href: '/' }, { name: 'Teams', href: '/teams' }, { name: team, href: `/team/${encodeURIComponent(team)}` }]}
+    >
       {(ranks.length > 0 || played > 0) && (
         <div className="team-stat-bar">
           {ranks.map((r) => (

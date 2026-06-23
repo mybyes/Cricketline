@@ -553,6 +553,17 @@ h1, h2, h3, .num { font-family: var(--display); letter-spacing: -.02em; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
+/* Breadcrumbs */
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .76rem; margin-bottom: 10px; }
+.match-page .crumbs { margin: 14px 0 4px; color: var(--muted); }
+.page-head .crumbs { color: rgba(255,255,255,.7); }
+.crumb { display: inline-flex; align-items: center; gap: 6px; }
+.crumb a { color: inherit; opacity: .85; font-weight: 500; }
+.crumb a:hover { opacity: 1; text-decoration: underline; }
+.crumb [aria-current] { font-weight: 600; }
+.page-head .crumb [aria-current] { color: #fff; }
+.crumb-sep { opacity: .5; }
+
 /* Series stats */
 .series-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 600px) { .series-stats { grid-template-columns: 1fr; } }
@@ -766,6 +777,18 @@ h1, h2, h3, .num { font-family: var(--display); letter-spacing: -.02em; }
 .squad-player:last-child { border-bottom: none; }
 .squad-name { font-weight: 600; }
 .squad-role { font-size: .68rem; color: var(--muted); background: var(--bg); padding: 2px 8px; border-radius: 10px; }
+
+/* Head-to-head / form */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+@media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
+.form-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
+.form-team { display: block; font-weight: 700; font-size: .88rem; margin-bottom: 10px; }
+.form-chips { display: flex; gap: 6px; align-items: center; }
+.form-chip { width: 24px; height: 24px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 800; color: #fff; }
+.form-W { background: var(--green); }
+.form-L { background: var(--live); }
+.form-N { background: var(--faint); }
+.form-none { font-size: .76rem; color: var(--muted); }
 
 /* Match info */
 .m-info-table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; font-size: .88rem; }

@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { Breadcrumbs } from '@/components/Breadcrumbs'
 import { Commentary } from '@/components/Commentary'
+import { HeadToHead } from '@/components/HeadToHead'
 import { LiveSummary } from '@/components/LiveSummary'
 import { MatchTabs, type MatchTab } from '@/components/MatchTabs'
 import { PredictionPoll } from '@/components/PredictionPoll'
@@ -10,7 +11,7 @@ import { Scorecard } from '@/components/Scorecard'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Squads } from '@/components/Squads'
-import { getBallByBall, getScorecard, getSquad, type BbbBall, type ScorecardData, type SquadTeam } from '@/lib/api'
+import { getBallByBall, getMatchHistory, getScorecard, getSquad, type BbbBall, type MatchHistoryData, type ScorecardData, type SquadTeam } from '@/lib/api'
 import { getSiteUrl } from '@/lib/site'
 
 export const revalidate = 12
@@ -20,13 +21,15 @@ function seriesOf(name: string) {
   return parts.length >= 2 ? parts[parts.length - 1] : ''
 }
 
-async function loadMatch(id: string): Promise<{ data: ScorecardData | null; bbb: BbbBall[]; squads: SquadTeam[] }> {
-  const [score, bbb, squad] = await Promise.all([getScorecard(id), getBallByBall(id), getSquad(id)])
+async function loadMatch(id: string): Promise<{ data: ScorecardData | null; bbb: BbbBall[]; squads: SquadTeam[]; history: MatchHistoryData | null }> {
+  const [score, bbb, squad, history] = await Promise.all([getScorecard(id), getBallByBall(id), getSquad(id), getMatchHistory(id)])
   const data = score.data && typeof score.data === 'object' && 'teams' in score.data ? score.data : null
+  const h = history.data && typeof history.data === 'object' && 'headToHead' in history.data ? history.data : null
   return {
     data,
     bbb: Array.isArray(bbb.data) ? bbb.data : [],
     squads: Array.isArray(squad.data) ? squad.data : [],
+    history: h,
   }
 }
 
@@ -45,7 +48,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { data, bbb, squads } = await loadMatch(id)
+  const { data, bbb, squads, history } = await loadMatch(id)
   if (!data) notFound()
 
   const site = getSiteUrl()
@@ -95,6 +98,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     { key: 'summary', label: live ? 'Live' : 'Summary', content: summary },
     { key: 'scorecard', label: 'Scorecard', content: <Scorecard innings={innings} /> },
     { key: 'squads', label: 'Squads', content: <Squads squads={squads} /> },
+    { key: 'h2h', label: 'H2H', content: <HeadToHead data={history ?? { headToHead: [], team1Recent: [], team2Recent: [] }} teams={data.teams} /> },
     { key: 'info', label: 'Info', content: info },
   ]
 
@@ -104,7 +108,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       <PageRefresher intervalMs={15_000} />
       <SiteHeader />
       <div className="container match-page">
-        <Link href="/matches" className="back-link">← All matches</Link>
+        <Breadcrumbs items={[
+          { name: 'Home', href: '/' },
+          { name: 'Matches', href: '/matches' },
+          { name: data.teams.join(' v '), href: `/match/${id}` },
+        ]} />
 
         <div className="match-hero">
           <div className="match-hero-top">

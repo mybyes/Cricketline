@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { AdSlot } from './AdSlot'
+import { Breadcrumbs, type Crumb } from './Breadcrumbs'
 import { PageRefresher } from './PageRefresher'
 import { SiteFooter } from './SiteFooter'
 import { SiteHeader } from './SiteHeader'
@@ -15,14 +16,15 @@ const EXPLORE = [
 ]
 
 export function PortalLayout({
-  title, subtitle, children, refresh,
-}: { title: string; subtitle?: string; children: ReactNode; refresh?: boolean }) {
+  title, subtitle, children, refresh, crumbs,
+}: { title: string; subtitle?: string; children: ReactNode; refresh?: boolean; crumbs?: Crumb[] }) {
   return (
     <>
       {refresh && <PageRefresher intervalMs={20_000} />}
       <SiteHeader />
       <div className="page-head">
         <div className="container">
+          {crumbs && crumbs.length > 0 && <Breadcrumbs items={crumbs} />}
           <h1 className="page-title">{title}</h1>
           {subtitle && <p className="page-sub">{subtitle}</p>}
         </div>
