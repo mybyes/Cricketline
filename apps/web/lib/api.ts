@@ -67,6 +67,7 @@ export interface InningScorecard {
   totals?: { r: number; w: number; o: number }
   fallOfWickets?: FallOfWicket[]
   didNotBat?: string[]
+  overRuns?: number[]
 }
 
 export interface SquadTeam {

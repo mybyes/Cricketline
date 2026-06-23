@@ -40,6 +40,7 @@ export interface SeedScorecard {
     totals?: { r: number; w: number; o: number }
     fallOfWickets?: { wkt: number; player: string; runs: number; over: number }[]
     didNotBat?: string[]
+    overRuns?: number[]
   }[]
   matchStarted: boolean
   matchEnded: boolean
@@ -253,6 +254,7 @@ const SC_RCB_MI: SeedScorecard = {
         { wkt: 5, player: 'D Karthik', runs: 199, over: 19.4 },
       ],
       didNotBat: ['M Siraj', 'J Hazlewood', 'Y Chahal'],
+      overRuns: [8, 12, 14, 6, 11, 9, 7, 10, 13, 8, 9, 11, 7, 12, 10, 14, 9, 12, 8, 11],
     },
     {
       inning: 'Mumbai Indians Inning',
@@ -278,6 +280,7 @@ const SC_RCB_MI: SeedScorecard = {
         { wkt: 3, player: 'Tilak Varma', runs: 120, over: 10.5 },
       ],
       didNotBat: ['T David', 'N Wadhera', 'P Chawla', 'A Madhwal'],
+      overRuns: [11, 9, 14, 10, 12, 9, 10, 13, 9, 12, 14, 11, 10, 10],
     },
   ],
 }

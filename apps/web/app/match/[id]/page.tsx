@@ -8,6 +8,7 @@ import { MatchTabs, type MatchTab } from '@/components/MatchTabs'
 import { PredictionPoll } from '@/components/PredictionPoll'
 import { PageRefresher } from '@/components/PageRefresher'
 import { Scorecard } from '@/components/Scorecard'
+import { SessionAnalytics } from '@/components/SessionAnalytics'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Squads } from '@/components/Squads'
@@ -96,6 +97,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   const tabs: MatchTab[] = [
     { key: 'summary', label: live ? 'Live' : 'Summary', content: summary },
+    { key: 'session', label: 'Session', content: <SessionAnalytics innings={innings} /> },
     { key: 'scorecard', label: 'Scorecard', content: <Scorecard innings={innings} /> },
     { key: 'squads', label: 'Squads', content: <Squads squads={squads} /> },
     { key: 'h2h', label: 'H2H', content: <HeadToHead data={history ?? { headToHead: [], team1Recent: [], team2Recent: [] }} teams={data.teams} /> },
