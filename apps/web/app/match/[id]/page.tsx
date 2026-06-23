@@ -2,17 +2,17 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
 import { Commentary } from '@/components/Commentary'
-import { HeadToHead } from '@/components/HeadToHead'
 import { LiveSummary } from '@/components/LiveSummary'
 import { MatchTabs, type MatchTab } from '@/components/MatchTabs'
 import { PredictionPoll } from '@/components/PredictionPoll'
 import { PageRefresher } from '@/components/PageRefresher'
+import { RatesPanel } from '@/components/RatesPanel'
 import { Scorecard } from '@/components/Scorecard'
 import { SessionAnalytics } from '@/components/SessionAnalytics'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Squads } from '@/components/Squads'
-import { getBallByBall, getMatchHistory, getScorecard, getSquad, type BbbBall, type MatchHistoryData, type ScorecardData, type SquadTeam } from '@/lib/api'
+import { getBallByBall, getScorecard, getSquad, type BbbBall, type ScorecardData, type SquadTeam } from '@/lib/api'
 import { getSiteUrl } from '@/lib/site'
 
 export const revalidate = 12
@@ -22,15 +22,13 @@ function seriesOf(name: string) {
   return parts.length >= 2 ? parts[parts.length - 1] : ''
 }
 
-async function loadMatch(id: string): Promise<{ data: ScorecardData | null; bbb: BbbBall[]; squads: SquadTeam[]; history: MatchHistoryData | null }> {
-  const [score, bbb, squad, history] = await Promise.all([getScorecard(id), getBallByBall(id), getSquad(id), getMatchHistory(id)])
+async function loadMatch(id: string): Promise<{ data: ScorecardData | null; bbb: BbbBall[]; squads: SquadTeam[] }> {
+  const [score, bbb, squad] = await Promise.all([getScorecard(id), getBallByBall(id), getSquad(id)])
   const data = score.data && typeof score.data === 'object' && 'teams' in score.data ? score.data : null
-  const h = history.data && typeof history.data === 'object' && 'headToHead' in history.data ? history.data : null
   return {
     data,
     bbb: Array.isArray(bbb.data) ? bbb.data : [],
     squads: Array.isArray(squad.data) ? squad.data : [],
-    history: h,
   }
 }
 
@@ -49,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { data, bbb, squads, history } = await loadMatch(id)
+  const { data, bbb, squads } = await loadMatch(id)
   if (!data) notFound()
 
   const site = getSiteUrl()
@@ -68,13 +66,18 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     homeTeam: { '@type': 'SportsTeam', name: data.teams[0] }, awayTeam: { '@type': 'SportsTeam', name: data.teams[1] },
   }
 
-  const summary = (
-    <div className="m-summary">
-      {live && hasScorecard && <LiveSummary data={data} bbb={bbb} />}
+  // Live tab: score summary + prediction, then Session / Rates analytics sub-tabs.
+  const liveContent = (
+    <div className="m-live">
+      {hasScorecard && <LiveSummary data={data} bbb={bbb} />}
       {data.teams.length >= 2 && <PredictionPoll matchId={id} teams={[data.teams[0], data.teams[1]]} />}
-      {bbb.length > 0 && (<><h3 className="m-sub">Recent overs</h3><Commentary bbb={bbb} /></>)}
-      {!live && !hasScorecard && (
-        <div className="empty-state"><p className="empty-title">{data.status}</p><p className="empty-sub">Scorecard and commentary appear once play begins.</p></div>
+      {hasScorecard ? (
+        <MatchTabs tabs={[
+          { key: 'session', label: 'Session', content: <SessionAnalytics innings={innings} /> },
+          { key: 'rates', label: 'Rates', content: <RatesPanel data={data} /> },
+        ]} />
+      ) : (
+        <div className="empty-state"><p className="empty-title">{data.status}</p><p className="empty-sub">Session & rate analytics appear once play begins.</p></div>
       )}
     </div>
   )
@@ -96,11 +99,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   )
 
   const tabs: MatchTab[] = [
-    { key: 'summary', label: live ? 'Live' : 'Summary', content: summary },
-    { key: 'session', label: 'Session', content: <SessionAnalytics innings={innings} /> },
+    { key: 'live', label: live ? 'Live' : 'Summary', content: liveContent },
+    { key: 'bbb', label: 'Ball by Ball', content: <Commentary bbb={bbb} /> },
     { key: 'scorecard', label: 'Scorecard', content: <Scorecard innings={innings} /> },
     { key: 'squads', label: 'Squads', content: <Squads squads={squads} /> },
-    { key: 'h2h', label: 'H2H', content: <HeadToHead data={history ?? { headToHead: [], team1Recent: [], team2Recent: [] }} teams={data.teams} /> },
     { key: 'info', label: 'Info', content: info },
   ]
 
