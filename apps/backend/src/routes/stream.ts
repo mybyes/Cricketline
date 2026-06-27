@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { getLiveMatches } from '../services/cricapi'
+import { cached, CACHE_KEYS, LIVE_MATCHES_TTL } from '../services/cache'
 import { addClient, removeClient } from '../services/realtime'
 
 /**
@@ -20,8 +21,10 @@ export default async function streamRoute(app: FastifyInstance) {
     reply.raw.write('retry: 5000\n\n') // tell EventSource to retry after 5s if dropped
 
     // Send an immediate snapshot so a fresh subscriber isn't blank until the next tick.
-    getLiveMatches(app.redis)
-      .then((data) => reply.raw.write(`event: scores\ndata: ${JSON.stringify({ data, ts: Date.now(), snapshot: true })}\n\n`))
+    // Read through the cache (shared key) so EventSource reconnect storms can't burn the
+    // CricAPI quota — upstream is hit at most once per LIVE_MATCHES_TTL regardless of churn.
+    cached(app.redis, CACHE_KEYS.liveMatches(), LIVE_MATCHES_TTL, () => getLiveMatches(app.redis))
+      .then(({ data }) => reply.raw.write(`event: scores\ndata: ${JSON.stringify({ data, ts: Date.now(), snapshot: true })}\n\n`))
       .catch(() => {})
 
     addClient(reply)

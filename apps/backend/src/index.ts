@@ -76,7 +76,9 @@ async function start() {
   // credentials:true lets the web app send the httpOnly session cookie cross-origin — which
   // requires a specific origin (not '*'), so set ALLOWED_ORIGINS in production for sign-in.
   const allowed = (process.env.ALLOWED_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean)
-  await app.register(cors, { origin: allowed.length ? allowed : true, credentials: true })
+  // Only allow credentialed (cookie) requests when origins are pinned — never reflect an
+  // arbitrary origin AND allow credentials. Mobile uses a Bearer token, so it's unaffected.
+  await app.register(cors, { origin: allowed.length ? allowed : true, credentials: allowed.length > 0 })
   await app.register(cookie)
   await app.register(helmet, { contentSecurityPolicy: false })
   // App polls ~12 req/min per screen; 10/min caused 429s and blank UIs

@@ -156,13 +156,13 @@ function ScoreHero({ data }: { data: ScorecardData }) {
   return (
     <View style={styles.hero}>
       <View style={styles.heroTeam}>
-        <TeamAvatar shortname={data.teamInfo?.[0]?.shortname ?? t0} logo={data.teamInfo?.[0]?.img} size={36} />
+        <TeamAvatar shortname={data.teamInfo?.[0]?.shortname ?? t0} name={t0} logo={data.teamInfo?.[0]?.img} size={36} />
         <Text style={styles.heroTeamName}>{data.teamInfo?.[0]?.shortname ?? t0}</Text>
         <Text style={styles.heroScore}>{s0 ? formatScore(s0) : '—'}</Text>
       </View>
       <Text style={styles.heroVs}>v</Text>
       <View style={[styles.heroTeam, { alignItems: 'flex-end' }]}>
-        <TeamAvatar shortname={data.teamInfo?.[1]?.shortname ?? t1} logo={data.teamInfo?.[1]?.img} size={36} />
+        <TeamAvatar shortname={data.teamInfo?.[1]?.shortname ?? t1} name={t1} logo={data.teamInfo?.[1]?.img} size={36} />
         <Text style={styles.heroTeamName}>{data.teamInfo?.[1]?.shortname ?? t1}</Text>
         <Text style={styles.heroScore}>{s1 ? formatScore(s1) : '—'}</Text>
       </View>
@@ -280,11 +280,13 @@ export function ScoreboardScreen() {
   useEffect(() => () => { if (refetchTimer.current) clearTimeout(refetchTimer.current) }, [])
 
   // Poll as a fallback only — slow it right down while the push channel is healthy.
+  // Drive it off loadRef so a score update doesn't tear down and restart the timer (which
+  // would keep resetting the interval and could starve the fallback poll).
   useEffect(() => {
     const interval = streaming ? 60_000 : stale ? 45_000 : 12_000
-    const poll = setInterval(() => load({ silent: true }), interval)
+    const poll = setInterval(() => loadRef.current({ silent: true }), interval)
     return () => clearInterval(poll)
-  }, [load, stale, streaming])
+  }, [stale, streaming])
 
   const scrollTabIntoView = useCallback((index: number) => {
     const layout = tabLayouts.current[index]

@@ -97,7 +97,7 @@ function TeamLine({ match, index, score, batting, alignRight }: {
   return (
     <View style={[styles.teamLine, alignRight && styles.teamLineRight]}>
       <View style={[styles.teamTop, alignRight && styles.teamTopRight]}>
-        <TeamAvatar shortname={name} logo={logo} size={32} />
+        <TeamAvatar shortname={name} name={match.teams[index]} logo={logo} size={32} />
         <View style={alignRight ? styles.teamTextRight : undefined}>
           <Text style={styles.shortName}>{name}</Text>
           <Text style={styles.fullName} numberOfLines={1}>{match.teams[index]}</Text>

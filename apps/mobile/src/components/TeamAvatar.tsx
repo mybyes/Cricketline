@@ -1,9 +1,9 @@
 import { Image, StyleSheet, Text, View } from 'react-native'
 import { teamColor } from '../theme/teamColors'
 
-export function TeamAvatar({ shortname, logo, size = 32 }: { shortname?: string; logo?: string; size?: number }) {
-  const bg = teamColor(shortname)
-  const initial = (shortname ?? '?')[0]?.toUpperCase() ?? '?'
+export function TeamAvatar({ shortname, name, logo, size = 32 }: { shortname?: string; name?: string; logo?: string; size?: number }) {
+  const bg = teamColor(shortname, name)
+  const initial = (shortname ?? name ?? '?')[0]?.toUpperCase() ?? '?'
 
   if (logo) {
     return <Image source={{ uri: logo }} style={{ width: size, height: size, borderRadius: size / 2 }} />

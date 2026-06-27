@@ -70,7 +70,7 @@ export async function signSession(user: SessionUser): Promise<string> {
 export async function verifySession(token: string): Promise<SessionUser | null> {
   if (!secretKey) return null
   try {
-    const { payload } = await jwtVerify(token, secretKey)
+    const { payload } = await jwtVerify(token, secretKey, { algorithms: ['HS256'] })
     if (!payload.sub) return null
     return { id: payload.sub, email: payload.email as string, name: payload.name as string, picture: payload.picture as string }
   } catch {

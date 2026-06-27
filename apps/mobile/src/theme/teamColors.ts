@@ -9,7 +9,9 @@ const BRAND: Record<string, string> = {
   AFG: '#0066b3', IRE: '#169b62', ZIM: '#b8232f', NED: '#e2711d',
 }
 
-const FALLBACK = ['#1b5e20', '#1565c0', '#6a1b9a', '#c62828', '#ef6c00', '#00838f', '#4527a0', '#2e7d32']
+// Keep this identical to apps/web/lib/teamColors.ts so an unbranded team hashes to the
+// same colour on web and mobile.
+const FALLBACK = ['#0f6b40', '#1565c0', '#6a1b9a', '#c62828', '#ef6c00', '#00838f', '#4527a0']
 
 /** Brand colour for a team by short code (preferred) or name; deterministic hash fallback otherwise. */
 export function teamColor(shortname?: string, name?: string): string {
