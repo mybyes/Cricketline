@@ -1,4 +1,5 @@
 import type { InningScorecard } from '@/lib/api'
+import { WormChart } from './WormChart'
 
 /** Over-phase analytics computed from real per-over runs + fall of wickets. Stats, not betting lines. */
 function wktsBy(inn: InningScorecard, over: number): number {
@@ -31,6 +32,12 @@ export function SessionAnalytics({ innings }: { innings: InningScorecard[] }) {
 
   return (
     <div className="session">
+      {withData.length >= 1 && (
+        <section className="session-inn">
+          <h3 className="m-sub">Run progression (Worm)</h3>
+          <WormChart innings={withData} />
+        </section>
+      )}
       {withData.map((inn, i) => {
         const overs = inn.overRuns ?? []
         const total = overs.length

@@ -795,6 +795,37 @@ h1, h2, h3, .num { font-family: var(--display); letter-spacing: -.02em; }
 .rc-fill { height: 100%; border-radius: 6px; transition: width .5s; }
 .rc-note { margin: 8px 0 0; font-size: .76rem; color: var(--muted); }
 
+/* Win probability */
+.winprob { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); margin-bottom: 8px; }
+.wp-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.wp-title { font-size: .82rem; font-weight: 800; color: var(--text); }
+.wp-model { font-size: .66rem; color: var(--faint); font-weight: 600; }
+.wp-bar { display: flex; height: 14px; border-radius: 8px; overflow: hidden; }
+.wp-fill { height: 100%; }
+.wp-a { background: var(--green); }
+.wp-b { background: #1565c0; }
+.wp-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: .82rem; color: var(--muted); font-weight: 600; }
+.wp-labels strong { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* Worm chart */
+.worm { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); }
+.worm-svg { width: 100%; height: auto; display: block; }
+.worm-grid { stroke: var(--border); stroke-width: 1; }
+.worm-axis { fill: var(--faint); font-size: 9px; font-weight: 600; }
+.worm-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 8px; font-size: .76rem; color: var(--muted); }
+.worm-key { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); }
+.worm-key strong { color: var(--score); }
+.worm-dot { width: 10px; height: 10px; border-radius: 50%; }
+.worm-cap { margin-left: auto; font-size: .7rem; color: var(--faint); }
+
+/* Ball-by-ball text commentary */
+.bbb-text { margin-top: 8px; display: flex; flex-direction: column; }
+.bbb-line { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); font-size: .84rem; }
+.bbb-ov { font-weight: 800; color: var(--muted); min-width: 38px; font-variant-numeric: tabular-nums; }
+.bbb-desc { color: var(--text); }
+.bbb-desc b { color: var(--score); }
+.bbb-desc .bbb-w { color: var(--live); font-weight: 800; }
+
 /* Session analytics (over-phase stats) */
 .session-inn { margin-bottom: 18px; }
 .phase-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }

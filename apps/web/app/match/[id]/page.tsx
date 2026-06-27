@@ -12,6 +12,7 @@ import { SessionAnalytics } from '@/components/SessionAnalytics'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Squads } from '@/components/Squads'
+import { WinProbability } from '@/components/WinProbability'
 import { getBallByBall, getScorecard, getSquad, type BbbBall, type ScorecardData, type SquadTeam } from '@/lib/api'
 import { getSiteUrl } from '@/lib/site'
 
@@ -70,6 +71,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const liveContent = (
     <div className="m-live">
       {hasScorecard && <LiveSummary data={data} bbb={bbb} />}
+      {hasScorecard && <WinProbability data={data} />}
       {data.teams.length >= 2 && <PredictionPoll matchId={id} teams={[data.teams[0], data.teams[1]]} />}
       {hasScorecard ? (
         <MatchTabs tabs={[

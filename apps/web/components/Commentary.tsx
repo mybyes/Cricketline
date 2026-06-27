@@ -28,6 +28,19 @@ function overRuns(balls: BbbBall[]) {
   return balls.reduce((sum, b) => sum + (typeof b.runs === 'number' ? b.runs : 0), 0)
 }
 
+/** Narrated outcome for one ball. */
+function ballText(b: BbbBall) {
+  const e = b.event?.toLowerCase() ?? ''
+  const r = typeof b.runs === 'number' ? b.runs : -1
+  if (e === 'w' || e.includes('wicket') || e.includes('out')) return <><span className="bbb-w">OUT!</span> wicket falls</>
+  if (r === 6) return <><b>SIX</b> — goes the distance</>
+  if (r === 4) return <><b>FOUR</b> — to the boundary</>
+  if (r === 0) return <>no run</>
+  if (r === 1) return <>1 run</>
+  if (r > 1) return <>{r} runs</>
+  return <>{b.event ?? '·'}</>
+}
+
 export function Commentary({ bbb }: { bbb: BbbBall[] }) {
   if (!bbb?.length) {
     return (
@@ -57,6 +70,14 @@ export function Commentary({ bbb }: { bbb: BbbBall[] }) {
                 </span>
               )
             })}
+          </div>
+          <div className="bbb-text">
+            {grp.balls.map((b, i) => (
+              <div key={i} className="bbb-line">
+                <span className="bbb-ov">{grp.overNum}.{i + 1}</span>
+                <span className="bbb-desc">{b.bowler ?? ''} to {b.batsman ?? ''}, {ballText(b)}</span>
+              </div>
+            ))}
           </div>
         </div>
       ))}
