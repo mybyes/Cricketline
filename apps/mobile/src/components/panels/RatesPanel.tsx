@@ -62,11 +62,6 @@ export function RatesPanel({ data }: { data: ScorecardData }) {
           </View>
         </View>
       )}
-
-      <View style={styles.card}>
-        <Text style={styles.label}>BOOKMAKER ODDS</Text>
-        <Text style={styles.muted}>Fancy / bhav rates require a licensed odds feed — coming in a future update.</Text>
-      </View>
     </View>
   )
 }
