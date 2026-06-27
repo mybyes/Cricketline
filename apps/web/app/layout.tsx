@@ -1,7 +1,9 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth'
+
+export const viewport: Viewport = { themeColor: '#0a3f27' }
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' })
 const display = Space_Grotesk({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-display', display: 'swap' })
@@ -35,6 +37,7 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   alternates: { canonical: site },
+  icons: { icon: '/icon.svg', shortcut: '/icon.svg', apple: '/icon.svg' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

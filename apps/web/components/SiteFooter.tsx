@@ -21,6 +21,17 @@ export function SiteFooter() {
           <AppDownloadButton />
         </div>
       </div>
+      <div className="container footer-popular">
+        <strong>Popular teams</strong>
+        <p>
+          {['India', 'Australia', 'England', 'Pakistan', 'South Africa', 'New Zealand', 'Bangladesh', 'Sri Lanka'].map((t, i) => (
+            <span key={t}>
+              {i > 0 && ' · '}
+              <a href={`/team/${encodeURIComponent(t)}`}>{t} cricket</a>
+            </span>
+          ))}
+        </p>
+      </div>
       <div className="container footer-copy">
         <p>© {new Date().getFullYear()} CricketFast · cricketfastliveline.in</p>
         <p>Data via CricAPI · Not affiliated with ICC or BCCI</p>

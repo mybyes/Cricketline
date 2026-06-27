@@ -353,6 +353,10 @@ h1, h2, h3, .num { font-family: var(--display); letter-spacing: -.02em; }
 .footer-grid strong { display: block; color: #fff; margin-bottom: 8px; }
 .footer-grid a { color: #a5d6a7; }
 .footer-grid .store-btn { margin-top: 10px; }
+.footer-popular { padding: 14px 0 4px; font-size: .8rem; opacity: .85; }
+.footer-popular strong { display: block; margin-bottom: 6px; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; opacity: .8; }
+.footer-popular a { color: inherit; text-decoration: none; }
+.footer-popular a:hover { text-decoration: underline; }
 .footer-copy { border-top: 1px solid rgba(255,255,255,.15); padding-top: 16px; text-align: center; font-size: .75rem; opacity: .7; }
 @media (max-width: 700px) { .footer-grid { grid-template-columns: 1fr; } .top-nav { display: none; } }
 
