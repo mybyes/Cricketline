@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify'
-import { getSeriesList, getSeriesTable } from '../services/cricapi'
+import { getSeriesList, getSeriesTable, seedSeriesList } from '../services/cricapi'
 import {
   apiPayload, apiPayloadOrCache, cached, CACHE_KEYS, SERIES_LIST_TTL, SERIES_TABLE_TTL,
 } from '../services/cache'
@@ -13,7 +13,7 @@ export default async function seriesRoute(app: FastifyInstance) {
       return apiPayload(result)
     } catch (e) {
       app.log.warn({ err: e }, 'series list fallback')
-      return apiPayloadOrCache(app.redis, key, null, [])
+      return apiPayloadOrCache(app.redis, key, null, seedSeriesList())
     }
   })
 

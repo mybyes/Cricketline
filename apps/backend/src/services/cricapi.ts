@@ -171,6 +171,27 @@ export async function getRecentMatches(redis: Redis, limit = 15) {
     .slice(0, limit)
 }
 
+/**
+ * Pre-filled fallback set — the genuine last resort. Routes use this only after the live
+ * source AND the cached real-data backup are both unavailable (no key / over quota / API
+ * down with a cold cache), so the app is never blank. Real data — even stale — is always
+ * preferred over this; seed never gets written back into the cache.
+ */
+export function seedMatchList(kind: 'live' | 'recent' | 'upcoming'): Match[] {
+  if (kind === 'live') return SEED_MATCHES.filter((m) => m.matchStarted && !m.matchEnded)
+  if (kind === 'upcoming') return SEED_MATCHES.filter((m) => !m.matchStarted && !m.matchEnded)
+  return SEED_MATCHES.filter((m) => m.matchEnded)
+    .sort((a, b) => new Date(b.dateTimeGMT).getTime() - new Date(a.dateTimeGMT).getTime())
+    .slice(0, 15)
+}
+
+export function seedSeriesList(limit = 12) {
+  return [
+    { id: 'seed-series', name: 'Indian Premier League 2026', startDate: '2026-05-01', endDate: '2026-06-30', odi: 0, t20: 1, test: 0 },
+    { id: 'seed-series-2', name: 'England tour of India 2026', startDate: '2026-06-10', endDate: '2026-07-05', odi: 0, t20: 0, test: 1 },
+  ].slice(0, limit)
+}
+
 export async function getMatchScore(matchId: string) {
   if (SEED_MODE) {
     const sc = SEED_SCORECARDS[matchId]
@@ -248,12 +269,7 @@ export function buildMatchHistory(matchId: string, all: Match[]) {
 }
 
 export async function getSeriesList(limit = 12) {
-  if (SEED_MODE) {
-    return [
-      { id: 'seed-series', name: 'Indian Premier League 2026', startDate: '2026-05-01', endDate: '2026-06-30', odi: 0, t20: 1, test: 0 },
-      { id: 'seed-series-2', name: 'England tour of India 2026', startDate: '2026-06-10', endDate: '2026-07-05', odi: 0, t20: 0, test: 1 },
-    ].slice(0, limit)
-  }
+  if (SEED_MODE) return seedSeriesList(limit)
   const data = await cricGet<{ id: string; name: string; startDate: string; endDate: string; odi: number; t20: number; test: number }[]>(
     'series',
     { offset: 0 },

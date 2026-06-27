@@ -55,10 +55,18 @@ Pick one (or both for resilience), then **remove `SEED_DATA`** (or set `0`):
 - **Real-time** (`/stream` SSE) needs nothing extra — it pushes whatever data the backend already has.
 
 ### Steps to go live with real data
-1. Buy/create the key (cricketdata.org **M** or **L** plan recommended).
-2. Railway → backend service → **Variables**: add `CRICAPI_KEY` (and/or `RAPIDAPI_KEY`), **remove `SEED_DATA`**.
+1. Create a **free** key at cricketdata.org (or pool a few as `CRICAPI_KEYS=k1,k2,k3`).
+2. Railway → backend service → **Variables**: add `CRICAPI_KEY` (and/or `CRICAPI_KEYS`), **remove `SEED_DATA`** (or set `0`).
 3. Railway redeploys (~1–2 min). Confirm: `GET /health` shows `"mode":"live"`.
 4. Web/mobile pick it up automatically (they just call the backend).
+
+**Live-first, pre-filled fallback (never blank).** Once a key is set, the match-list and
+series endpoints serve in this priority order, so the app always shows *something*:
+`live API → fresh cache → 7-day real backup → pre-filled set`. Real data — even stale — is
+always preferred; the pre-filled set only appears on a genuine cold-start failure (no key,
+all keys over quota, or API down before the cache ever warmed) and is flagged `stale:true`.
+A healthy API with simply no live match shows an honest empty Live tab (not fake matches),
+while real recent/upcoming still populate.
 
 > Free tiers are rate-capped, so heavy live-match traffic eventually needs a paid CricAPI plan.
 

@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify'
-import { getLiveMatches, getRecentMatches, getUpcomingMatches } from '../services/cricapi'
+import { getLiveMatches, getRecentMatches, getUpcomingMatches, seedMatchList } from '../services/cricapi'
 import {
   apiPayload,
   apiPayloadOrCache,
@@ -33,7 +33,7 @@ export default async function matchesRoute(app: FastifyInstance) {
       return apiPayload(result)
     } catch (e) {
       app.log.warn({ err: e }, 'live matches fallback')
-      return apiPayloadOrCache(app.redis, key, null, [], filterLiveMatches)
+      return apiPayloadOrCache(app.redis, key, null, seedMatchList('live'), filterLiveMatches)
     }
   })
 
@@ -48,7 +48,7 @@ export default async function matchesRoute(app: FastifyInstance) {
       return apiPayload(result)
     } catch (e) {
       app.log.warn({ err: e }, 'recent matches fallback')
-      return apiPayloadOrCache(app.redis, key, null, [], (all) => filterRecentMatches(all))
+      return apiPayloadOrCache(app.redis, key, null, seedMatchList('recent'), (all) => filterRecentMatches(all))
     }
   })
 
@@ -63,7 +63,7 @@ export default async function matchesRoute(app: FastifyInstance) {
       return apiPayload(result)
     } catch (e) {
       app.log.warn({ err: e }, 'upcoming matches fallback')
-      return apiPayloadOrCache(app.redis, key, null, [], filterUpcomingMatches)
+      return apiPayloadOrCache(app.redis, key, null, seedMatchList('upcoming'), filterUpcomingMatches)
     }
   })
 }
