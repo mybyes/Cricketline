@@ -49,18 +49,26 @@ export async function removeFavorite(deviceId: string, matchId: string) {
   await removeFavoriteRedis(deviceId, matchId)
 }
 
-export async function savePushToken(deviceId: string, pushToken: string, platform?: string) {
+export interface PushTokenOpts {
+  userId?: string | null
+  notifyEnabled?: boolean
+}
+
+export async function savePushToken(deviceId: string, pushToken: string, platform?: string, opts: PushTokenOpts = {}) {
+  const userId = opts.userId ?? null
+  const notifyEnabled = opts.notifyEnabled ?? true
   const db = getDb()
   if (db) {
     await db`
-      INSERT INTO device_tokens (device_id, push_token, platform)
-      VALUES (${deviceId}, ${pushToken}, ${platform ?? null})
+      INSERT INTO device_tokens (device_id, push_token, platform, user_id, notify_enabled)
+      VALUES (${deviceId}, ${pushToken}, ${platform ?? null}, ${userId}, ${notifyEnabled})
       ON CONFLICT (device_id) DO UPDATE
-      SET push_token = EXCLUDED.push_token, platform = EXCLUDED.platform, updated_at = NOW()
+      SET push_token = EXCLUDED.push_token, platform = EXCLUDED.platform,
+          user_id = EXCLUDED.user_id, notify_enabled = EXCLUDED.notify_enabled, updated_at = NOW()
     `
     return
   }
-  await savePushTokenRedis(deviceId, pushToken, platform)
+  await savePushTokenRedis(deviceId, pushToken, platform, userId, notifyEnabled)
 }
 
 export async function getPushTokensForMatch(matchId: string): Promise<string[]> {
@@ -70,7 +78,7 @@ export async function getPushTokensForMatch(matchId: string): Promise<string[]> 
       SELECT DISTINCT d.push_token
       FROM favorites f
       INNER JOIN device_tokens d ON f.device_id = d.device_id
-      WHERE f.match_id = ${matchId}
+      WHERE f.match_id = ${matchId} AND d.notify_enabled = TRUE
     `
     return rows.map((r) => r.push_token as string)
   }
@@ -112,15 +120,17 @@ async function getPushTokensForMatchRedis(matchId: string): Promise<string[]> {
   for (const id of deviceIds) {
     const raw = await redis.get(tokenKey(id))
     if (!raw) continue
-    const parsed = JSON.parse(raw) as { push_token?: string }
-    if (parsed.push_token) tokens.push(parsed.push_token)
+    const parsed = JSON.parse(raw) as { push_token?: string; notify_enabled?: boolean }
+    if (parsed.push_token && parsed.notify_enabled !== false) tokens.push(parsed.push_token)
   }
   return tokens
 }
 
-async function savePushTokenRedis(deviceId: string, pushToken: string, platform?: string) {
+async function savePushTokenRedis(
+  deviceId: string, pushToken: string, platform?: string, userId?: string | null, notifyEnabled = true,
+) {
   const redis = getRedis()
-  await redis.set(tokenKey(deviceId), JSON.stringify({ push_token: pushToken, platform }))
+  await redis.set(tokenKey(deviceId), JSON.stringify({ push_token: pushToken, platform, user_id: userId ?? null, notify_enabled: notifyEnabled }))
 }
 
 let _redis: Redis | null = null

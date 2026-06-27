@@ -15,6 +15,18 @@ export async function initDb() {
     sql = postgres(DATABASE_URL, { max: 20, idle_timeout: 20, connect_timeout: 10 })
 
     await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        google_sub TEXT UNIQUE NOT NULL,
+        email TEXT,
+        name TEXT,
+        picture TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `
+
+    await sql`
       CREATE TABLE IF NOT EXISTS favorites (
         device_id TEXT NOT NULL,
         match_id TEXT NOT NULL,
@@ -29,9 +41,14 @@ export async function initDb() {
         device_id TEXT PRIMARY KEY,
         push_token TEXT NOT NULL,
         platform TEXT,
+        user_id TEXT REFERENCES users (id) ON DELETE SET NULL,
+        notify_enabled BOOLEAN NOT NULL DEFAULT TRUE,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `
+    // Additive migration for installs created before accounts existed.
+    await sql`ALTER TABLE device_tokens ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users (id) ON DELETE SET NULL`
+    await sql`ALTER TABLE device_tokens ADD COLUMN IF NOT EXISTS notify_enabled BOOLEAN NOT NULL DEFAULT TRUE`
     await sql`
       CREATE TABLE IF NOT EXISTS match_comments (
         id TEXT PRIMARY KEY,

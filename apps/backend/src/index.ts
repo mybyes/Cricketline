@@ -1,10 +1,12 @@
 import 'dotenv/config'
 import Fastify, { type FastifyError } from 'fastify'
+import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import { Redis } from 'ioredis'
 import { initDb } from './db'
+import authRoute from './routes/auth'
 import matchesRoute from './routes/matches'
 import scoreRoute from './routes/score'
 import matchExtrasRoute from './routes/matchExtras'
@@ -22,6 +24,7 @@ import { getLiveMatches } from './services/cricapi'
 import { initStoreRedis, rebuildMatchFanIndex } from './services/store'
 import { initCommentsRedis } from './services/comments'
 import { initPollRedis } from './services/poll'
+import { initUsersRedis } from './services/users'
 import { warmCaches } from './services/cacheWarmer'
 import { startWicketWatcher } from './services/wicketWatcher'
 import { SEED_MODE } from './services/cricapi'
@@ -60,6 +63,7 @@ app.decorate('redis', redis)
 initStoreRedis(redis)
 initCommentsRedis(redis)
 initPollRedis(redis)
+initUsersRedis(redis)
 initRealtime(redis)
 
 async function start() {
@@ -67,9 +71,12 @@ async function start() {
   await rebuildMatchFanIndex()
   app.log.info(dbReady ? 'PostgreSQL connected' : 'Using Redis for favorites (set DATABASE_URL for Postgres)')
 
-  // CORS: lock to ALLOWED_ORIGINS (comma-separated) in prod; '*' when unset (dev/demo).
+  // CORS: lock to ALLOWED_ORIGINS (comma-separated) in prod; reflect the caller in dev/demo.
+  // credentials:true lets the web app send the httpOnly session cookie cross-origin — which
+  // requires a specific origin (not '*'), so set ALLOWED_ORIGINS in production for sign-in.
   const allowed = (process.env.ALLOWED_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean)
-  await app.register(cors, { origin: allowed.length ? allowed : '*' })
+  await app.register(cors, { origin: allowed.length ? allowed : true, credentials: true })
+  await app.register(cookie)
   await app.register(helmet, { contentSecurityPolicy: false })
   // App polls ~12 req/min per screen; 10/min caused 429s and blank UIs
   await app.register(rateLimit, {
@@ -81,6 +88,7 @@ async function start() {
       error: 'Too many requests — wait a moment and retry. Cached scores may still be available.',
     }),
   })
+  app.register(authRoute)
   app.register(matchesRoute)
   app.register(scoreRoute)
   app.register(matchExtrasRoute)
