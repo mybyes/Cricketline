@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify'
-import { getMatchBbb, getMatchHistory, getMatchSquad } from '../services/cricapi'
+import { getMatchBbb, getMatchHistory, getMatchSquad, seedBbb, seedSquad } from '../services/cricapi'
 import {
   apiPayload, apiPayloadOrCache, cached, CACHE_KEYS, SQUAD_TTL, BBB_TTL, HISTORY_TTL,
 } from '../services/cache'
@@ -14,7 +14,7 @@ export default async function matchExtrasRoute(app: FastifyInstance) {
       return apiPayload(result)
     } catch (e) {
       app.log.warn({ err: e, matchId: id }, 'squad fallback')
-      return apiPayloadOrCache(app.redis, key, null, [])
+      return apiPayloadOrCache(app.redis, key, null, seedSquad(id) ?? [])
     }
   })
 
@@ -26,7 +26,7 @@ export default async function matchExtrasRoute(app: FastifyInstance) {
       return apiPayload(result)
     } catch (e) {
       app.log.warn({ err: e, matchId: id }, 'bbb fallback')
-      return apiPayloadOrCache(app.redis, key, null, [])
+      return apiPayloadOrCache(app.redis, key, null, seedBbb(id) ?? [])
     }
   })
 

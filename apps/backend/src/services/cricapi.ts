@@ -192,12 +192,28 @@ export function seedSeriesList(limit = 12) {
   ].slice(0, limit)
 }
 
+/**
+ * Pre-filled detail for a built-in seed match — used by the detail routes as a last resort
+ * (keyed by id, so a real match never gets seed data). Exposed for the route layer because
+ * during an upstream-backoff window the cache short-circuits before the fetcher runs.
+ */
+export function seedScorecard(matchId: string) {
+  const sc = SEED_SCORECARDS[matchId]
+  if (sc) return sc
+  const m = SEED_MATCHES.find((x) => x.id === matchId)
+  return m ? scorecardFromMatch(m) : null
+}
+export function seedSquad(matchId: string) {
+  return SEED_SQUADS[matchId] ?? null
+}
+export function seedBbb(matchId: string) {
+  return SEED_BBB[matchId] ?? null
+}
+
 export async function getMatchScore(matchId: string) {
   if (SEED_MODE) {
-    const sc = SEED_SCORECARDS[matchId]
-    if (sc) return sc
-    const m = SEED_MATCHES.find((x) => x.id === matchId)
-    if (m) return scorecardFromMatch(m)
+    const seed = seedScorecard(matchId)
+    if (seed) return seed
     throw new Error('seed: scorecard not found')
   }
   return cricGet('match_scorecard', { id: matchId })

@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify'
-import { getMatchScore, scorecardFromMatch } from '../services/cricapi'
+import { getMatchScore, scorecardFromMatch, seedScorecard } from '../services/cricapi'
 import type { Match } from '../services/cricapi'
 import {
   apiPayload,
@@ -33,6 +33,11 @@ export default async function scoreRoute(app: FastifyInstance) {
       const stub = await scoreFromAllMatches(app.redis, id)
       if (stub) {
         return { success: true, data: stub.data, stale: true, cachedAt: stub.cachedAt }
+      }
+      // Last resort: pre-filled card for a built-in seed match (real ids return null here).
+      const seed = seedScorecard(id)
+      if (seed) {
+        return { success: true, data: seed, stale: true }
       }
       reply.status(404).send({ success: false, error: 'Scorecard not available' })
     }
