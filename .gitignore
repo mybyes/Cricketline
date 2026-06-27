@@ -4,3 +4,7 @@ node_modules
 dist
 .expo
 .pnpm-store
+
+# local tooling & build artifacts (keep out of git)
+.claude/
+*.tsbuildinfo
