@@ -35,6 +35,7 @@ export function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [stale, setStale] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [tab, setTab] = useState<'featured' | 'live' | 'series'>('featured')
   const bootstrapped = useRef(false)
   const liveRef = useRef(live)
   const recentRef = useRef(recent)
@@ -150,6 +151,27 @@ export function HomeScreen() {
   const matchCount = live.length + recent.length + upcoming.length
   const showSkeleton = loading && !refreshing && matchCount === 0
 
+  const featured = live[0] ?? upcoming[0] ?? recent[0]
+
+  // Group all matches by series (last comma segment of the match name).
+  const seriesGroups = (() => {
+    const order: string[] = []
+    const map = new Map<string, Match[]>()
+    for (const m of [...live, ...upcoming, ...recent]) {
+      const parts = m.name.split(',').map((s) => s.trim())
+      const key = parts.length >= 2 ? parts[parts.length - 1] : (m.matchType?.toUpperCase() ?? 'Other')
+      if (!map.has(key)) { map.set(key, []); order.push(key) }
+      map.get(key)!.push(m)
+    }
+    return order.map((k) => ({ series: k, matches: map.get(k)! }))
+  })()
+
+  const TABS: { key: typeof tab; label: string }[] = [
+    { key: 'featured', label: 'Featured' },
+    { key: 'live', label: 'Live' },
+    { key: 'series', label: 'Series' },
+  ]
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <AppHeader
@@ -159,6 +181,14 @@ export function HomeScreen() {
           <View style={styles.pill}><Text style={styles.pillT}>{live.length}</Text></View>
         ) : undefined}
       />
+
+      <View style={styles.slider}>
+        {TABS.map((t) => (
+          <Pressable key={t.key} onPress={() => setTab(t.key)} style={[styles.slideBtn, tab === t.key && styles.slideBtnOn]}>
+            <Text style={[styles.slideTxt, tab === t.key && styles.slideTxtOn]}>{t.label}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       {showSkeleton ? (
         <View style={{ paddingTop: 8 }}>
@@ -177,9 +207,26 @@ export function HomeScreen() {
             <FeedPausedCard onRetry={() => load({ pull: true })} />
           )}
 
-          {renderSection('Live now', live)}
-          {renderSection('Recent results', recent.slice(0, 8))}
-          {renderSection('Upcoming fixtures', upcoming.slice(0, 8))}
+          {tab === 'featured' && (
+            <>
+              {featured && renderSection('Featured', [featured])}
+              {renderSection('Live now', live.filter((m) => m.id !== featured?.id))}
+              {renderSection('Up next', upcoming.slice(0, 4))}
+            </>
+          )}
+
+          {tab === 'live' && (
+            <>
+              {renderSection('Live now', live)}
+              {renderSection('Recent results', recent.slice(0, 8))}
+            </>
+          )}
+
+          {tab === 'series' && (
+            seriesGroups.length > 0 ? seriesGroups.map((g) => renderSection(g.series, g.matches)) : (
+              <Text style={styles.sectionEmpty}>No series to show right now</Text>
+            )
+          )}
 
           {matchCount === 0 && !loading && (
             <View style={styles.hintBox}>
@@ -201,6 +248,11 @@ const styles = StyleSheet.create({
   pill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   pillT: { color: '#fff', fontWeight: '800', fontSize: 14 },
   scroll: { paddingBottom: 24 },
+  slider: { flexDirection: 'row', gap: 6, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.bg },
+  slideBtn: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 999, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  slideBtnOn: { backgroundColor: colors.header, borderColor: colors.header },
+  slideTxt: { fontSize: 13, fontWeight: '800', color: colors.textMuted },
+  slideTxtOn: { color: '#fff' },
   bannerWrap: { marginBottom: 4 },
   section: { marginTop: 8 },
   sectionTitle: { fontSize: 11, fontWeight: '800', color: colors.textDim, letterSpacing: 1, marginLeft: 16, marginBottom: 6, marginTop: 8 },
