@@ -14,8 +14,10 @@ import { StaleBanner } from '../components/StaleBanner'
 import { staleNotice } from '../lib/cacheTime'
 import { loadScoreCache, saveScoreCache } from '../lib/matchCache'
 import { LiveLinePanel } from '../components/LiveLinePanel'
+import { LivePulse } from '../components/LivePulse'
 import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
 import { TeamAvatar } from '../components/TeamAvatar'
+import { useScoreStream } from '../lib/scoreStream'
 import { RatesPanel } from '../components/panels/RatesPanel'
 import { SessionPanel } from '../components/panels/SessionPanel'
 import { SquadPanel } from '../components/panels/SquadPanel'
@@ -260,10 +262,29 @@ export function ScoreboardScreen() {
     return () => { cancelled = true }
   }, [matchId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keep a ref to the latest loader so the SSE subscription never re-opens on data change.
+  const loadRef = useRef(load)
+  loadRef.current = load
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Real-time push: when the live stream reports this match, apply its score/status
+  // instantly and debounce-refetch ball-by-ball + scorecard (which the stream omits).
+  const streaming = useScoreStream(matchId, (m) => {
+    setData((prev) => prev
+      ? { ...prev, score: m.score ?? prev.score, status: m.status ?? prev.status, matchStarted: m.matchStarted, matchEnded: m.matchEnded }
+      : prev)
+    if (refetchTimer.current) clearTimeout(refetchTimer.current)
+    refetchTimer.current = setTimeout(() => loadRef.current({ silent: true }), 800)
+  })
+
+  useEffect(() => () => { if (refetchTimer.current) clearTimeout(refetchTimer.current) }, [])
+
+  // Poll as a fallback only — slow it right down while the push channel is healthy.
   useEffect(() => {
-    const poll = setInterval(() => load({ silent: true }), stale ? 45_000 : 12_000)
+    const interval = streaming ? 60_000 : stale ? 45_000 : 12_000
+    const poll = setInterval(() => load({ silent: true }), interval)
     return () => clearInterval(poll)
-  }, [load, stale])
+  }, [load, stale, streaming])
 
   const scrollTabIntoView = useCallback((index: number) => {
     const layout = tabLayouts.current[index]
@@ -362,6 +383,12 @@ export function ScoreboardScreen() {
                 <Text style={styles.shareText}>Share</Text>
               </Pressable>
             )}
+            {streaming && data?.matchStarted && !data?.matchEnded && (
+              <View style={styles.streamPill}>
+                <LivePulse size={6} />
+                <Text style={styles.streamText}>LIVE</Text>
+              </View>
+            )}
             <View style={styles.fmtPill}><Text style={styles.fmtPillText}>{data?.matchType?.toUpperCase() ?? matchType?.toUpperCase() ?? 'MATCH'}</Text></View>
             <LiveBadge ended={data?.matchEnded} started={data?.matchStarted} />
           </View>
@@ -433,6 +460,8 @@ const styles = StyleSheet.create({
   navRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   shareBtn: { paddingHorizontal: 8, paddingVertical: 4 },
   shareText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  streamPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(229,57,53,0.18)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4 },
+  streamText: { color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
   fmtPill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
   fmtPillText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   backBtn: { paddingVertical: 4, minHeight: 44, justifyContent: 'center' },

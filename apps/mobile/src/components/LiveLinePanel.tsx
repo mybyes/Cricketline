@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { BbbBall } from '../types/extras'
 import { currentPartnership } from '../lib/partnerships'
-import { ballColor, ballSummaryLabel } from '../lib/ballColors'
+import { ballActors, ballColor, narrateBall } from '../lib/ballColors'
 import { buildOverSummaryLine, groupRecentOvers } from '../lib/bbbUtils'
 import type { Match } from '../types/match'
 import type { ScorecardData } from '../types/scorecard'
@@ -9,6 +9,7 @@ import { colors } from '../theme/colors'
 import { formatScore, formatSr } from '../theme/matchUtils'
 import { liveRates } from '../lib/matchStats'
 import { OtherLiveMatches } from './OtherLiveMatches'
+import { WinProbability } from './WinProbability'
 
 export function LiveLinePanel({
   data, bbb = [], otherLive = [], onSwitchMatch,
@@ -62,6 +63,8 @@ export function LiveLinePanel({
         )}
       </View>
 
+      {isLive && <WinProbability data={data} />}
+
       {isLive && bbb.length === 0 && (
         <View style={styles.waitingBox}>
           <Text style={styles.waitingText}>Waiting for ball-by-ball data…</Text>
@@ -109,7 +112,22 @@ export function LiveLinePanel({
                     )
                   })}
                 </View>
-                <Text style={styles.overSummarySm}>{g.balls.map(ballSummaryLabel).join(' ')}</Text>
+                <View style={styles.commentaryList}>
+                  {g.balls.map((b, i) => {
+                    const n = narrateBall(b)
+                    const actors = ballActors(b)
+                    return (
+                      <View key={i} style={styles.commentaryLine}>
+                        <Text style={styles.commentaryOv}>{g.overNum}.{i + 1}</Text>
+                        <Text style={styles.commentaryText}>
+                          {actors ? `${actors}, ` : ''}
+                          {n.headline ? <Text style={styles.commentaryHl}>{n.headline} </Text> : null}
+                          {n.text}
+                        </Text>
+                      </View>
+                    )
+                  })}
+                </View>
               </View>
             ))}
           </ScrollView>
@@ -186,7 +204,11 @@ const styles = StyleSheet.create({
   overBallsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 4 },
   ballChipSm: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   ballTextSm: { fontSize: 10, fontWeight: '900' },
-  overSummarySm: { fontSize: 11, color: colors.textMuted, letterSpacing: 0.3 },
+  commentaryList: { marginTop: 6, gap: 4 },
+  commentaryLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  commentaryOv: { fontSize: 11, fontWeight: '800', color: colors.textDim, width: 30, paddingTop: 1 },
+  commentaryText: { flex: 1, fontSize: 12, color: colors.textMuted, lineHeight: 17 },
+  commentaryHl: { fontWeight: '900', color: colors.score },
   creaseLabel: { fontSize: 10, fontWeight: '800', color: colors.textDim, letterSpacing: 0.8, marginBottom: 8 },
   scoreRow: {
     flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.card,

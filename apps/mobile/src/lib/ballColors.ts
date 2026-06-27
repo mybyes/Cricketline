@@ -29,3 +29,24 @@ export function ballSummaryLabel(b: BbbBall): string {
   if (b.runs != null && Number.isFinite(b.runs)) return String(b.runs)
   return b.event ?? '·'
 }
+
+/** Narrated outcome for one ball — "FOUR — to the boundary", "OUT! wicket falls", etc. */
+export function narrateBall(b: BbbBall): { headline?: string; text: string } {
+  const e = b.event?.toLowerCase() ?? ''
+  const r = typeof b.runs === 'number' ? b.runs : -1
+  if (e === 'w' || e === 'wicket' || e.includes('wicket') || e.includes('out')) {
+    return { headline: 'OUT!', text: 'wicket falls' }
+  }
+  if (r === 6) return { headline: 'SIX', text: 'goes the distance' }
+  if (r === 4) return { headline: 'FOUR', text: 'to the boundary' }
+  if (r === 0) return { text: 'no run' }
+  if (r === 1) return { text: '1 run' }
+  if (r > 1) return { text: `${r} runs` }
+  return { text: b.event ?? 'dot ball' }
+}
+
+/** "Bowler to Batsman" prefix when the feed provides names. */
+export function ballActors(b: BbbBall): string {
+  if (b.bowler && b.batsman) return `${b.bowler} to ${b.batsman}`
+  return ''
+}
