@@ -62,6 +62,27 @@ Pick one (or both for resilience), then **remove `SEED_DATA`** (or set `0`):
 
 > Free tiers are rate-capped, so heavy live-match traffic eventually needs a paid CricAPI plan.
 
+### Near-zero-cost live data (the realistic path)
+Goal: CricLine-style live line at ~₹0/month. What actually works:
+
+- **Don't scrape ESPNcricinfo/Cricbuzz directly from the backend.** Their CDNs (Akamai)
+  block **datacenter IPs**, which is exactly what a free cloud host is — you get `403 Access
+  Denied`. Verified by probe. The free-looking scraper path dies in production.
+- **Use the API adapters instead** (already built): `CRICAPI_KEYS` (pool several free keys —
+  each 100/day — for ~300–500/day rotated) and/or `RAPIDAPI_KEY` (Cricbuzz). RapidAPI works
+  from a blocked host because **their** servers fetch Cricbuzz, not yours.
+- **The backend is now tuned to make free quotas last** (so you stay under both the API daily
+  cap and the Upstash free 10k-commands/day budget):
+  - the live publish loop only runs **when an SSE client is actually connected**, reads
+    through the cache (≤1 upstream call per `LIVE_MATCHES_TTL`), and **publishes only on
+    change** — not a fixed call every few seconds;
+  - the wicket-alert watcher **self-paces**: fast (15s) only while a match is live, otherwise
+    every 5 min.
+- **Honest ceiling:** free CricAPI alone (even rotated) can't sustain *continuous* sub-10s
+  ball-by-ball for many concurrent matches — that needs the paid **L $29.99** tier or the
+  RapidAPI Cricbuzz plan. For a low-traffic hobby app with bursty match-day viewing, the free
+  pool + the guards above is enough.
+
 ---
 
 ## Quick reference

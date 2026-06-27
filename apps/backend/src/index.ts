@@ -19,8 +19,9 @@ import dailyRoute from './routes/daily'
 import portalRoute from './routes/portal'
 import searchRoute from './routes/search'
 import streamRoute from './routes/stream'
-import { initRealtime, publishScores } from './services/realtime'
+import { clientCount, initRealtime, publishScores } from './services/realtime'
 import { getLiveMatches } from './services/cricapi'
+import { cached, CACHE_KEYS, LIVE_MATCHES_TTL } from './services/cache'
 import { initStoreRedis, rebuildMatchFanIndex } from './services/store'
 import { initCommentsRedis } from './services/comments'
 import { initPollRedis } from './services/poll'
@@ -105,12 +106,22 @@ async function start() {
   warmCaches(redis, app.log).catch(() => {})
   startWicketWatcher(redis, app.log)
 
-  // Publisher tick: every 10s, push the current live snapshot onto the event bus.
-  // (Production optimization: publish only on a detected change, and read from cache —
-  //  here we keep it simple/visible for the demo; seed mode makes it free.)
-  setInterval(async () => {
-    try { publishScores({ data: await getLiveMatches(redis), ts: Date.now() }) } catch { /* skip tick */ }
-  }, 10_000)
+  // Publisher tick — the near-zero-cost hot loop. Three guards keep it off the API quota
+  // and the Upstash command budget:
+  //   1. No SSE clients connected → don't fetch or publish at all (most of the day).
+  //   2. Read live matches through the cache (shared key, LIVE_MATCHES_TTL) so upstream is
+  //      hit at most once per TTL no matter the tick rate — not once per 8s.
+  //   3. Publish only when the snapshot actually changed (skip redundant PUBLISH + fan-out).
+  let lastLiveSig = ''
+  async function liveTick() {
+    if (clientCount() === 0) return
+    const live = await cached(redis, CACHE_KEYS.liveMatches(), LIVE_MATCHES_TTL, () => getLiveMatches(redis))
+    const sig = JSON.stringify(live)
+    if (sig === lastLiveSig) return
+    lastLiveSig = sig
+    publishScores({ data: live, ts: Date.now() })
+  }
+  setInterval(() => { liveTick().catch(() => { /* skip tick */ }) }, 8_000)
 
   app.get('/', async () => ({
     service: 'CricketFast API',
