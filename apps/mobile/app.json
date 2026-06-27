@@ -4,7 +4,8 @@
     "slug": "cricketfast",
     "owner": "mybyess-team",
     "version": "1.0.0",
-    "description": "Live cricket line — scores, session, squad, history & points table. Free, no login.",
+    "description": "Live cricket line — scores, session, squad, history & points table.",
+    "scheme": "cricketfast",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -55,7 +56,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#0a3f27"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

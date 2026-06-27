@@ -96,10 +96,22 @@ export async function removeFavoriteRemote(deviceId: string, matchId: string) {
   return api(`/favorites/${matchId}?device_id=${encodeURIComponent(deviceId)}`, { method: 'DELETE' })
 }
 
-export async function registerDevice(deviceId: string, pushToken: string, platform: string) {
+export async function registerDevice(
+  deviceId: string,
+  pushToken: string,
+  platform: string,
+  opts: { authToken?: string | null; notifyEnabled?: boolean } = {},
+) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (opts.authToken) headers.Authorization = `Bearer ${opts.authToken}`
   return api('/devices/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ device_id: deviceId, push_token: pushToken, platform }),
+    headers,
+    body: JSON.stringify({
+      device_id: deviceId,
+      push_token: pushToken,
+      platform,
+      notify_enabled: opts.notifyEnabled ?? true,
+    }),
   })
 }

@@ -1,5 +1,6 @@
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
+import { AuthProvider } from './src/context/AuthContext'
 import { FavoritesProvider } from './src/context/FavoritesContext'
 import { useNotificationNavigation } from './src/hooks/useNotificationNavigation'
 import { navigationRef } from './src/navigation/navigationRef'
@@ -25,11 +26,13 @@ function AppRoot() {
 
 export default function App() {
   return (
-    <FavoritesProvider>
-      <NavigationContainer ref={navigationRef} theme={theme}>
-        <StatusBar style="light" />
-        <AppRoot />
-      </NavigationContainer>
-    </FavoritesProvider>
+    <AuthProvider>
+      <FavoritesProvider>
+        <NavigationContainer ref={navigationRef} theme={theme}>
+          <StatusBar style="light" />
+          <AppRoot />
+        </NavigationContainer>
+      </FavoritesProvider>
+    </AuthProvider>
   )
 }

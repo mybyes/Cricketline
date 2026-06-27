@@ -12,7 +12,7 @@ Notifications.setNotificationHandler({
   }),
 })
 
-export async function registerForPushNotifications(): Promise<string | null> {
+export async function registerForPushNotifications(authToken?: string | null): Promise<string | null> {
   if (Platform.OS === 'web') return null
 
   const { status: existing } = await Notifications.getPermissionsAsync()
@@ -25,7 +25,8 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
   const token = (await Notifications.getExpoPushTokenAsync()).data
   const deviceId = await getDeviceId()
-  await registerDevice(deviceId, token, Platform.OS).catch(() => {})
+  // Pass the session token so the push token is linked to the signed-in account.
+  await registerDevice(deviceId, token, Platform.OS, { authToken, notifyEnabled: true }).catch(() => {})
   return token
 }
 
