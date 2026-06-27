@@ -1,77 +1,70 @@
-# CricketFast — Deployment Checklist
+# CricketFast — Deployment guide
 
-Stack: **Railway** (backend) · **Vercel** (web) · **Upstash Redis** · **Supabase** (optional) · **GitHub** · **Expo/EAS** (mobile).
+Monorepo: **backend** (Fastify → Railway) · **web** (Next.js → Vercel) · **mobile** (Expo → EAS).
+Shared services: **Upstash Redis** (cache + comments/poll), **Supabase** (optional Postgres), **GitHub** (`mybyes/Cricketline`).
 
-> Current code runs in **SEED mode** (built-in demo data) so it works with zero data keys.
-> To serve **real** scores, add a data key and unset `SEED_DATA` (Step 4).
+| App | Deploys to | Auto-deploys from | Guide |
+|---|---|---|---|
+| Backend | Railway (`backend-production-233f.up.railway.app`) | push to `master` | below |
+| Web | Vercel (`cricketline-mybyes.vercel.app`) | push to `master` | [`apps/web/README.md`](apps/web/README.md) |
+| Mobile (Android) | EAS / Play Store | manual `eas build` | [`apps/mobile/README.md`](apps/mobile/README.md) |
+
+> **Data flows one way:** mobile & web only read from the **backend**. Only the **backend** holds
+> data keys, and only the backend decides demo vs live. Changing data mode = a Railway env change.
 
 ---
 
-## 0. Prerequisites
-- GitHub repo: `mybyes/Cricketline` (pushed)
-- Accounts: Railway, Vercel, Upstash, (optional) Supabase, (mobile) Expo + Google Play
+## Backend → Railway
+Connected to the repo; redeploys on push to `master`. Set these **Variables**:
 
-## 1. Push the code
-```bash
-git push -u origin feat/cricbuzz-style-portal
-# then open a PR and merge to master (Railway/Vercel deploy from the production branch)
-```
-> Pushing only auto-deploys **after** each host is connected to the repo (Steps 2–3). A branch
-> gets a Vercel **preview** URL; production deploys from `master`.
-
-## 2. Backend → Railway
-Already connected (`backend-production-233f.up.railway.app`); redeploys on push to `master`.
-Set **Variables**:
-
-| Variable | Value | Required |
+| Variable | Required? | What it does |
 |---|---|---|
-| `UPSTASH_REDIS_URL` | `rediss://…` from Upstash | ✅ |
-| `SEED_DATA` | `1` (demo data) — remove for live | see Step 4 |
-| `CRICAPI_KEY` *or* `CRICAPI_KEYS` | CricAPI key(s) | for live data |
-| `RAPIDAPI_KEY` | RapidAPI key (Cricbuzz fallback) | optional |
-| `DATABASE_URL` | Supabase Postgres URL | optional (Step 5) |
-| `ALLOWED_ORIGINS` | `https://cricketfastliveline.in` | recommended for prod |
-| `COMMENTS_ENABLED` | `0` to disable (comments UI already removed on web) | optional |
+| `UPSTASH_REDIS_URL` | ✅ yes | Cache + backup store; fallback store for comments/poll/favorites |
+| `SEED_DATA` | demo only | `1` = serve built-in demo dataset (no data key needed). Remove for live. |
+| `CRICAPI_KEY` *or* `CRICAPI_KEYS` | live data | cricketdata.org key(s). `CRICAPI_KEYS` = comma list, auto-rotates on quota |
+| `RAPIDAPI_KEY` | optional | Cricbuzz (RapidAPI) fallback source. `RAPIDAPI_CRICBUZZ_HOST` optional |
+| `DATABASE_URL` | optional | Supabase Postgres → persistent comments/favorites (else Redis fallback) |
+| `ALLOWED_ORIGINS` | prod recommended | comma-separated CORS allow-list (unset = allow all) |
+| `COMMENTS_ENABLED` | optional | `0` disables the comments feature |
+| `PORT` | optional | defaults to 3000 (Railway sets this) |
 
-## 3. Web → Vercel  *(one-time setup — this is the missing piece)*
-Pushing does **nothing** until this is done once:
-1. Vercel → **Add New → Project** → import `mybyes/Cricketline`.
-2. **Root Directory:** `apps/web`.
-3. **Environment Variables:**
-   | Variable | Value |
-   |---|---|
-   | `API_URL` | `https://backend-production-233f.up.railway.app` |
-   | `NEXT_PUBLIC_API_URL` | `https://backend-production-233f.up.railway.app` |
-   | `NEXT_PUBLIC_SITE_URL` | `https://cricketfastliveline.in` |
-4. Deploy → test the `*.vercel.app` URL.
-5. **Domain:** add `cricketfastliveline.in` in Vercel → Domains, then point DNS.
-   ⚠️ That domain currently serves a **different** site — this replaces it.
-
-After this, every push to `master` auto-deploys; branches get preview URLs.
-*(Alternative: host web as a 2nd Railway service running `next build && next start` — then no Vercel.)*
-
-## 4. Data — demo vs live  *(the key decision)*
-- **Demo (now):** `SEED_DATA=1` → built-in sample matches/scorecards. Good for launch/preview.
-- **Live:** set `CRICAPI_KEY` (paid M/L plan recommended; free = 100/day) **and remove `SEED_DATA`**.
-  - Optional resilience: also set `RAPIDAPI_KEY` (Cricbuzz fallback). ⚠️ Its response mapper is
-    built but **unverified** — test once after adding the key and adjust `cricbuzzSource.ts` if fields differ.
-- Rankings are curated/static (`services/rankings.ts`) regardless.
-
-## 5. Supabase (optional — persistent comments/favorites)
-Set `DATABASE_URL` on Railway → tables (`favorites`, `device_tokens`, `match_comments`) auto-create on boot.
-Without it, Redis fallback is used (fine for low volume).
-
-## 6. Mobile → EAS (separate track)
-The new web sections aren't in the app yet. To ship the existing app:
-```bash
-cd apps/mobile
-eas login
-eas build --platform android --profile production
-eas submit  --platform android --profile production   # needs play-service-account.json
-```
-After listing is live, set `NEXT_PUBLIC_ANDROID_APP_URL` on Vercel to enable real download links.
+Local: copy `apps/backend/.env.example` → `.env`, then `pnpm dev:backend`.
 
 ---
 
-### Minimum to go live (demo data): Steps 1–3 + Upstash URL → ~30 min.
-### To go live with real scores: also do Step 4 (data key).
+## Demo → prod: what to add
+
+**The web & mobile apps need ZERO changes.** Going live = swapping the backend's data source on Railway.
+
+### Right now (demo)
+`SEED_DATA=1` → the backend serves a complete built-in dataset (live matches, scorecards,
+ball-by-ball, results, rankings). **No data key, no cost.** Good for launch/preview.
+
+### To serve real scores — add a data API key
+Pick one (or both for resilience), then **remove `SEED_DATA`** (or set `0`):
+
+| Provider | Env var | Free tier | Notes |
+|---|---|---|---|
+| **cricketdata.org (CricAPI)** | `CRICAPI_KEY` | 100 req/**day** | Official, stable. Paid: **M $12.99/10k·day**, **L $29.99/100k·day** — recommended for live traffic |
+| **Cricbuzz (unofficial, RapidAPI)** | `RAPIDAPI_KEY` | free tier (capped) | Richer data; unofficial/scraped, can break. Adapter: `apidojo` "Cricbuzz Cricket" |
+
+- Set **both** → CricAPI primary, Cricbuzz fallback (the backend rotates automatically).
+- `CRICAPI_KEYS=k1,k2,k3` → pool multiple free CricAPI keys to multiply the daily quota.
+- **Rankings stay curated/static** (`services/rankings.ts`) — no extra API needed.
+- **Comments / poll / favorites** use Redis by default; add `DATABASE_URL` (Supabase) only for persistence at scale.
+- **Real-time** (`/stream` SSE) needs nothing extra — it pushes whatever data the backend already has.
+
+### Steps to go live with real data
+1. Buy/create the key (cricketdata.org **M** or **L** plan recommended).
+2. Railway → backend service → **Variables**: add `CRICAPI_KEY` (and/or `RAPIDAPI_KEY`), **remove `SEED_DATA`**.
+3. Railway redeploys (~1–2 min). Confirm: `GET /health` shows `"mode":"live"`.
+4. Web/mobile pick it up automatically (they just call the backend).
+
+> Free tiers are rate-capped, so heavy live-match traffic eventually needs a paid CricAPI plan.
+
+---
+
+## Quick reference
+- **Web deploy:** [`apps/web/README.md`](apps/web/README.md)
+- **Android build/publish:** [`apps/mobile/README.md`](apps/mobile/README.md)
+- **Health check:** `GET https://backend-production-233f.up.railway.app/health`
