@@ -208,7 +208,7 @@ h1, h2, h3, .num { font-family: var(--display); letter-spacing: -.02em; }
 .team-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .team-top-right { flex-direction: row-reverse; }
 .team-logo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--bg); }
-.logo-ph { width: 32px; height: 32px; border-radius: 50%; background: var(--border); display: inline-block; }
+.logo-ph { width: 32px; height: 32px; border-radius: 50%; background: var(--border); display: inline-flex; align-items: center; justify-content: center; color: #fff; font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: .2px; flex: 0 0 auto; }
 .team-block .short { font-size: 1.05rem; font-weight: 800; }
 .team-block .full { font-size: .68rem; color: var(--muted); margin-top: 1px; }
 .team-block .score { font-size: 1.15rem; font-weight: 800; color: var(--muted); }
@@ -494,7 +494,12 @@ h1, h2, h3, .num { font-family: var(--display); letter-spacing: -.02em; }
 /* Match detail page */
 .match-page { padding: 20px 0 40px; }
 .back-link { font-size: .9rem; font-weight: 600; color: var(--green); text-decoration: none !important; display: inline-block; margin-bottom: 16px; }
-.match-hero { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+.match-hero { position: relative; overflow: hidden; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 26px 24px 22px; margin-bottom: 20px; box-shadow: var(--shadow); }
+.match-hero-accent { position: absolute; top: 0; left: 0; right: 0; height: 5px; }
+.match-hero h1 { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; }
+.hero-team { display: inline-flex; align-items: center; gap: 9px; }
+.hero-team-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.hero-vs { font-family: var(--sans); font-size: .8rem; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; }
 .match-hero-top { display: flex; gap: 8px; margin-bottom: 12px; }
 .match-hero h1 { margin: 0 0 8px; font-size: 1.4rem; }
 .match-hero-status { font-size: 1rem; font-weight: 700; color: var(--score); margin: 0 0 16px; }

@@ -1,18 +1,11 @@
 import Image from 'next/image'
-
-const PALETTE = ['#1b5e20', '#1565c0', '#6a1b9a', '#c62828', '#ef6c00', '#00838f']
-
-function colorFor(name: string): string {
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i) * 17) % PALETTE.length
-  return PALETTE[h]!
-}
+import { teamColor } from '@/lib/teamColors'
 
 type Props = { shortname?: string; name?: string; img?: string; size?: number }
 
 export function TeamBadge({ shortname, name, img, size = 40 }: Props) {
   const label = shortname ?? name?.slice(0, 3).toUpperCase() ?? '?'
-  const bg = colorFor(shortname ?? name ?? '?')
+  const bg = teamColor(shortname, name)
 
   if (img) {
     return (

@@ -15,6 +15,7 @@ import { Squads } from '@/components/Squads'
 import { WinProbability } from '@/components/WinProbability'
 import { getBallByBall, getScorecard, getSquad, type BbbBall, type ScorecardData, type SquadTeam } from '@/lib/api'
 import { getSiteUrl } from '@/lib/site'
+import { teamColor } from '@/lib/teamColors'
 
 export const revalidate = 12
 
@@ -57,6 +58,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const series = seriesOf(data.name)
   const innings = data.scorecard ?? []
   const hasScorecard = innings.some((i) => i.batting?.length)
+  const c0 = teamColor(data.teamInfo?.[0]?.shortname, data.teams[0])
+  const c1 = teamColor(data.teamInfo?.[1]?.shortname, data.teams[1])
+  const chipColor = (inning: string) =>
+    inning.toLowerCase().includes((data.teams[0] ?? '').toLowerCase().split(' ')[0]) ? c0 : c1
 
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'SportsEvent',
@@ -121,15 +126,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         ]} />
 
         <div className="match-hero">
+          <span className="match-hero-accent" style={{ background: `linear-gradient(90deg, ${c0} 0 50%, ${c1} 50% 100%)` }} aria-hidden />
           <div className="match-hero-top">
             <span className="badge-fmt">{fmt}</span>
             {live ? <span className="badge-live">● LIVE</span> : data.matchEnded ? <span className="badge-status">RESULT</span> : <span className="badge-status">UPCOMING</span>}
             {series && <span className="match-hero-series">{series}</span>}
           </div>
-          <h1>{data.teams.join(' vs ')}</h1>
+          <h1>
+            <span className="hero-team"><span className="hero-team-dot" style={{ background: c0 }} />{data.teams[0]}</span>
+            <span className="hero-vs">vs</span>
+            <span className="hero-team"><span className="hero-team-dot" style={{ background: c1 }} />{data.teams[1]}</span>
+          </h1>
           <div className="match-hero-scores">
             {data.score?.map((s, i) => (
-              <div key={i} className="hero-score-chip">
+              <div key={i} className="hero-score-chip" style={{ borderLeft: `3px solid ${chipColor(s.inning)}` }}>
                 <span className="hero-inn">{s.inning.replace(/ inning.*$/i, '')}</span>
                 <span className="hero-runs">{s.r}/{s.w} <small>({s.o})</small></span>
               </div>
