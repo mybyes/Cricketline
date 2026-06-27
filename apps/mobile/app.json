@@ -4,7 +4,7 @@
     "slug": "cricketfast",
     "owner": "mybyess-team",
     "version": "1.0.0",
-    "description": "Live cricket line — scores, session, squad, history & points table.",
+    "description": "Live cricket line — fast ball-by-ball scores, session & rates, scorecard, squads, fixtures & points table. Free, no login.",
     "scheme": "cricketfast",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

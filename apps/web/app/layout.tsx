@@ -11,7 +11,12 @@ const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cricketfastliveline.in
 export const metadata: Metadata = {
   title: 'CricketFast Live Line — Live Cricket Scores, IPL & Ball by Ball',
   description: 'Live cricket scores, ball-by-ball commentary, scorecards, fixtures, series, rankings and points tables — IPL, Tests, ODIs & T20.',
-  keywords: ['live cricket score', 'cricket live line', 'cricket scorecard', 'IPL live score', 'ball by ball'],
+  applicationName: 'CricketFast Live Line',
+  keywords: [
+    'live cricket line', 'cricket live line', 'live line app', 'ball by ball live',
+    'live cricket score', 'cricket scorecard', 'IPL live score', 'cricket live line app',
+    'fastest live cricket score', 'session and rates', 'cricket fixtures', 'points table',
+  ],
   metadataBase: new URL(site),
   openGraph: {
     title: 'CricketFast Live Line — Live Cricket Scores',

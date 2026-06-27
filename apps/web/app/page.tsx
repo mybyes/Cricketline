@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { AppDownloadButton } from '@/components/AppDownloadButton'
 import { DailySection } from '@/components/DailySection'
@@ -10,27 +11,71 @@ import { getSiteUrl } from '@/lib/site'
 
 export const revalidate = 15
 
+export const metadata: Metadata = {
+  title: 'CricketFast Live Line — Live Cricket Scores & Ball by Ball',
+  description: 'Fast live cricket line: real-time scores, ball-by-ball commentary, session & rate analytics, scorecards, squads and fixtures — IPL, Tests, ODIs & T20. Free, no login.',
+  keywords: [
+    'live cricket line', 'cricket live line', 'live line app', 'ball by ball live',
+    'live cricket score', 'cricket scorecard', 'session and rates', 'IPL live score',
+    'fastest live cricket score', 'live cricket commentary', 'cricket live line app',
+  ],
+  alternates: { canonical: getSiteUrl() },
+  openGraph: {
+    title: 'CricketFast Live Line — Live Cricket Scores & Ball by Ball',
+    description: 'Real-time cricket scores, ball-by-ball, session & rate analytics — IPL, Tests, ODIs & T20.',
+    url: getSiteUrl(),
+    type: 'website',
+  },
+}
+
+// FAQ — visible content below mirrors this exactly (Google wants the schema to match the page).
+const FAQ = [
+  {
+    q: 'Is CricketFast a live cricket line app?',
+    a: 'Yes — CricketFast is a fast live cricket line with real-time ball-by-ball updates, live scores, session and rate analytics, full scorecards and squads, on both web and Android.',
+  },
+  {
+    q: 'How fast do the live scores update?',
+    a: 'Scores and ball-by-ball refresh in real time over a live stream, updating through every over of a match without reloading the page.',
+  },
+  {
+    q: 'Is CricketFast free and do I need to log in?',
+    a: 'CricketFast is free and fully usable without an account. Sign-in is optional and only adds match notifications.',
+  },
+  {
+    q: 'Which formats and leagues are covered?',
+    a: 'Tests, ODIs and T20 — internationals, the IPL and major franchise leagues — with live scores, fixtures, results, series and points tables.',
+  },
+]
+
 const faqJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'What is live line, session and scorecard?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'The CricketFast mobile app includes 9 match tabs: Live Line, Session, Rates, Win %, Scorecard, History, Squad, Table and Info.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'How often do live scores update?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Scores and ball-by-ball commentary refresh automatically through every over of a live match.',
-      },
-    },
-  ],
+  mainEntity: FAQ.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+}
+
+const appJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'CricketFast — Live Cricket Line',
+  applicationCategory: 'SportsApplication',
+  operatingSystem: 'Android, Web',
+  url: getSiteUrl(),
+  description: 'Live cricket line with real-time ball-by-ball, session & rate analytics, scorecards, squads and fixtures.',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
+}
+
+const orgJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'CricketFast',
+  url: getSiteUrl(),
+  logo: `${getSiteUrl()}/og.svg`,
+  sameAs: ['https://x.com/ChaiPeCric'],
 }
 
 export default async function HomePage() {
@@ -60,9 +105,11 @@ export default async function HomePage() {
         },
       }) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
       <PageRefresher intervalMs={15_000} />
       <SiteHeader />
-      <h1 className="sr-only">Live Cricket Scores — IPL, Tests, ODIs & T20 ball-by-ball</h1>
+      <h1 className="sr-only">Live Cricket Scores &amp; Live Line — IPL, Tests, ODIs &amp; T20, Ball by Ball</h1>
 
       <div className="container page-layout">
         <main className="main-col">
@@ -77,23 +124,25 @@ export default async function HomePage() {
           }} />
 
           <section className="seo-block" id="download">
-            <h2>Why CricketFast?</h2>
+            <h2>A faster cricket live line</h2>
             <p>
-              Real-time cricket scores, scorecards, ball-by-ball and stats across IPL, internationals and T20 leagues. Tap any match for the full summary.
+              CricketFast is a real-time cricket <strong>live line</strong> — <strong>ball-by-ball</strong> updates,
+              live scores, <strong>session &amp; rate</strong> analytics, full scorecards, squads and fixtures across
+              the IPL, internationals and major T20 leagues. It streams live (no manual refresh), works on web and as a
+              free Android app, and needs no login. Looking for a fast live-line app? Tap any match for the full
+              ball-by-ball summary.
             </p>
           </section>
 
           <section className="faq">
-            <h2>FAQ</h2>
+            <h2>Frequently asked questions</h2>
             <div className="faq-grid">
-              <div>
-                <h3>Live line &amp; session</h3>
-                <p>The app has dedicated tabs for ball-by-ball live line, powerplay/middle/death session stats, and full scorecard.</p>
-              </div>
-              <div>
-                <h3>Formats covered</h3>
-                <p>Full coverage across Test, ODI and T20 — internationals, the IPL and major franchise leagues.</p>
-              </div>
+              {FAQ.map((f) => (
+                <div key={f.q}>
+                  <h3>{f.q}</h3>
+                  <p>{f.a}</p>
+                </div>
+              ))}
             </div>
           </section>
         </main>
