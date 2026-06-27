@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { OverRunChart } from '../OverRunChart'
+import { RateHistory } from '../RateHistory'
 import type { BbbBall } from '../../types/extras'
 import { runsPerOver } from '../../lib/overRuns'
 import { t20PhaseStats } from '../../lib/sessionPhases'
@@ -64,6 +65,7 @@ export function SessionPanel({ data, bbb = [] }: { data: ScorecardData; bbb?: Bb
       )}
 
       {overRuns.length > 0 && <OverRunChart data={overRuns} />}
+      {(data.scorecard?.length ?? 0) > 0 && <RateHistory innings={data.scorecard} matchType={data.matchType} />}
     </View>
   )
 }

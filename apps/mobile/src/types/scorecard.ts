@@ -23,6 +23,7 @@ export interface InningScorecard {
   bowling: BowlerRow[]
   extras?: { t: number; b?: number; lb?: number; w?: number; nb?: number; p?: number }
   totals?: { r: number; w: number; o: number }
+  overRuns?: number[]
 }
 
 export interface ScorecardData {
