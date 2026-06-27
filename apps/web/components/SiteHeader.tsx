@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AppDownloadButton } from './AppDownloadButton'
+import { AuthButton } from './AuthButton'
 import { TopMatchesBar } from './TopMatchesBar'
 
 const NAV = [
@@ -34,6 +35,7 @@ export function SiteHeader() {
           <button type="submit" aria-label="Search">⌕</button>
         </form>
         <AppDownloadButton className="app-cta" label="Get App" comingSoonLabel="Get App" />
+        <AuthButton />
       </div>
       </header>
       <TopMatchesBar />

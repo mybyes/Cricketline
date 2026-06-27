@@ -60,6 +60,20 @@ h1, h2, h3, .num { font-family: var(--display); letter-spacing: -.02em; }
   gap: 16px;
   flex-wrap: wrap;
 }
+
+/* ---- Auth (Google sign-in) ---- */
+.auth-gsi { display: inline-flex; align-items: center; min-height: 36px; }
+.auth-menu { position: relative; }
+.auth-avatar { width: 34px; height: 34px; padding: 0; border: 1px solid var(--border); background: var(--card, #fff); border-radius: 50%; cursor: pointer; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; }
+.auth-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.auth-avatar-fallback { font-family: var(--display); font-weight: 700; font-size: .85rem; color: #fff; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--green); }
+.auth-dropdown { position: absolute; right: 0; top: calc(100% + 8px); width: 240px; background: var(--card, #fff); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.16); padding: 12px; z-index: 60; }
+.auth-id { padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+.auth-name { margin: 0; font-weight: 700; font-size: .92rem; color: var(--text); }
+.auth-email { margin: 2px 0 0; font-size: .78rem; color: var(--muted); word-break: break-all; }
+.auth-note { margin: 0 0 10px; font-size: .76rem; color: var(--muted); line-height: 1.45; }
+.auth-signout { width: 100%; padding: 9px; border: 1px solid var(--border); background: transparent; border-radius: 8px; font-weight: 600; font-size: .85rem; color: var(--text); cursor: pointer; }
+.auth-signout:hover { background: var(--bg-soft, #f4f5f7); border-color: var(--green); color: var(--green); }
 .brand { flex: 1; min-width: 200px; }
 .brand-link { display: flex; align-items: center; gap: 10px; text-decoration: none !important; color: #fff; }
 .brand-mark {
