@@ -1,4 +1,5 @@
 import type { InningScorecard } from '@/lib/api'
+import { RateHistory } from './RateHistory'
 import { WormChart } from './WormChart'
 
 /** Over-phase analytics computed from real per-over runs + fall of wickets. Stats, not betting lines. */
@@ -19,7 +20,7 @@ function cumAt(inn: InningScorecard, over: number) {
   return { runs, wkts: wktsBy(inn, over) }
 }
 
-export function SessionAnalytics({ innings }: { innings: InningScorecard[] }) {
+export function SessionAnalytics({ innings, matchType }: { innings: InningScorecard[]; matchType?: string }) {
   const withData = innings.filter((i) => (i.overRuns?.length ?? 0) > 0)
   if (!withData.length) {
     return (
@@ -36,6 +37,12 @@ export function SessionAnalytics({ innings }: { innings: InningScorecard[] }) {
         <section className="session-inn">
           <h3 className="m-sub">Run progression (Worm)</h3>
           <WormChart innings={withData} />
+        </section>
+      )}
+      {withData.length >= 1 && (
+        <section className="session-inn">
+          <h3 className="m-sub">Rate history</h3>
+          <RateHistory innings={withData} matchType={matchType} />
         </section>
       )}
       {withData.map((inn, i) => {

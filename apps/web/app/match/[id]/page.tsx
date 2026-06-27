@@ -75,7 +75,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {data.teams.length >= 2 && <PredictionPoll matchId={id} teams={[data.teams[0], data.teams[1]]} />}
       {hasScorecard ? (
         <MatchTabs tabs={[
-          { key: 'session', label: 'Session', content: <SessionAnalytics innings={innings} /> },
+          { key: 'session', label: 'Session', content: <SessionAnalytics innings={innings} matchType={data.matchType} /> },
           { key: 'rates', label: 'Rates', content: <RatesPanel data={data} /> },
         ]} />
       ) : (
