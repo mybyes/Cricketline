@@ -26,12 +26,11 @@ import { colors } from '../theme/colors'
 import { formatScore, formatSr } from '../theme/matchUtils'
 
 type Route = RouteProp<RootStackParamList, 'Scoreboard'>
-type Tab = 'line' | 'session' | 'rates' | 'scorecard' | 'squad' | 'info'
+type Tab = 'line' | 'session' | 'scorecard' | 'squad' | 'info'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'line', label: 'Live Line' },
-  { key: 'session', label: 'Session' },
-  { key: 'rates', label: 'Rates' },
+  { key: 'session', label: 'Session & Rates' },
   { key: 'scorecard', label: 'Scorecard' },
   { key: 'squad', label: 'Squad' },
   { key: 'info', label: 'Info' },
@@ -321,8 +320,7 @@ export function ScoreboardScreen() {
     if (!data) return null
     switch (key) {
       case 'line': return <LiveLinePanel data={data} bbb={bbb} otherLive={otherLive} onSwitchMatch={switchMatch} />
-      case 'session': return <SessionPanel data={data} bbb={bbb} />
-      case 'rates': return <RatesPanel data={data} />
+      case 'session': return <><SessionPanel data={data} bbb={bbb} /><RatesPanel data={data} /></>
       case 'squad': return <SquadPanel matchId={matchId} />
       case 'info': return (
         <View style={styles.infoCard}>
