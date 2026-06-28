@@ -64,7 +64,7 @@ Set `NEXT_PUBLIC_ANDROID_APP_URL` on Vercel (web) to the Play Store URL — this
 ---
 
 ## App identity
-- Package / bundle id: `com.cricketfast.live` (`app.json` — Android & iOS)
+- Package / bundle id: `com.livelineguru.app` (`app.json` — Android & iOS)
 - Version: `1.0.0`, versionCode `1` (auto-increments on production builds)
 - iOS config is present but the Play/EAS flow above is Android-only.
 

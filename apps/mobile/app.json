@@ -5,16 +5,16 @@
     "owner": "mybyess-team",
     "version": "1.0.0",
     "description": "Live cricket line — fast ball-by-ball scores, session & rates, scorecard, squads, fixtures & points table. Free, no login.",
-    "scheme": "cricketfast",
+    "scheme": "livelineguru",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.cricketfast.live"
+      "bundleIdentifier": "com.livelineguru.app"
     },
     "android": {
-      "package": "com.cricketfast.live",
+      "package": "com.livelineguru.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0a3f27",

@@ -25,9 +25,9 @@ Google ID token  ──►  POST /auth/google  ──►  our HS256 session
      - Authorised JavaScript origins: `http://localhost:3001`, your Vercel URL
        (e.g. `https://cricketline-mybyes.vercel.app`).
      - Authorised redirect URIs: not needed for the web One-Tap/button flow.
-   - **Android** — package name `com.cricketfast.live` + your signing-cert SHA-1
+   - **Android** — package name `com.livelineguru.app` + your signing-cert SHA-1
      (from EAS: `eas credentials`).
-   - **iOS** — bundle id `com.cricketfast.live` (only if you ship iOS).
+   - **iOS** — bundle id `com.livelineguru.app` (only if you ship iOS).
 3. Note each **Client ID**. (No client *secret* is needed — we only verify ID tokens.)
 
 ---
@@ -70,7 +70,7 @@ The browser loads Google Identity Services, gets an ID token, and posts it to
 | `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Android client ID (for standalone Android builds). |
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | iOS client ID (only if shipping iOS). |
 
-`app.json` already declares `"scheme": "cricketfast"` for the OAuth redirect. Sign-in uses
+`app.json` already declares `"scheme": "livelineguru"` for the OAuth redirect. Sign-in uses
 `expo-auth-session`; the returned Google ID token is exchanged at `/auth/google` and the
 session token is kept in `AsyncStorage`.
 
