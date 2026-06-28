@@ -81,9 +81,10 @@ async function start() {
   await app.register(cors, { origin: allowed.length ? allowed : true, credentials: allowed.length > 0 })
   await app.register(cookie)
   await app.register(helmet, { contentSecurityPolicy: false })
-  // App polls ~12 req/min per screen; 10/min caused 429s and blank UIs
+  // App polls ~12 req/min per screen; 10/min caused 429s and blank UIs. Per-IP, overridable
+  // via RATE_LIMIT_MAX (raise for load testing, lower to tighten).
   await app.register(rateLimit, {
-    max: 200,
+    max: Number(process.env.RATE_LIMIT_MAX) || 200,
     timeWindow: '1 minute',
     ban: 0,
     errorResponseBuilder: () => ({

@@ -87,6 +87,9 @@ async function serveStaleOnly<T>(redis: Redis, key: string): Promise<CacheResult
   return null
 }
 
+/** In-flight fetches, keyed by cache key — see single-flight note in cached(). */
+const inflight = new Map<string, Promise<CacheResult<unknown>>>()
+
 /** Read-through cache: primary → live fetch → backup (never wipes good data with empty) */
 export async function cached<T>(
   redis: Redis,
@@ -108,27 +111,41 @@ export async function cached<T>(
     return { data: entry.data, stale: false, cachedAt: entry.cachedAt }
   }
 
-  if (await upstreamInBackoff(redis)) {
-    const stale = await serveStaleOnly<T>(redis, key)
-    if (stale) return stale
-    throw new Error('upstream_unavailable')
-  }
+  // Single-flight: a burst of concurrent misses on the same key shares ONE fetch, so a
+  // traffic spike at cache-expiry triggers a single upstream call (not one per request) —
+  // protecting the free CricAPI quota and the Upstash command budget under load.
+  const existing = inflight.get(key)
+  if (existing) return existing as Promise<CacheResult<T>>
 
-  try {
-    const fresh = await fetcher()
-    if (isNonempty(fresh)) await clearUpstreamBackoff(redis)
-    await writeCache(redis, key, ttl, fresh)
-    if (isNonempty(fresh)) {
-      return { data: fresh, stale: false, cachedAt: Date.now() }
+  const work: Promise<CacheResult<T>> = (async () => {
+    if (await upstreamInBackoff(redis)) {
+      const stale = await serveStaleOnly<T>(redis, key)
+      if (stale) return stale
+      throw new Error('upstream_unavailable')
     }
-    const backup = await readBackup<T>(redis, key)
-    if (backup) return { data: backup.data, stale: true, cachedAt: backup.cachedAt }
-    return { data: fresh, stale: false, cachedAt: Date.now() }
-  } catch {
-    await markUpstreamBackoff(redis)
-    const backup = await readBackup<T>(redis, key)
-    if (backup) return { data: backup.data, stale: true, cachedAt: backup.cachedAt }
-    throw new Error('upstream_unavailable')
+    try {
+      const fresh = await fetcher()
+      if (isNonempty(fresh)) await clearUpstreamBackoff(redis)
+      await writeCache(redis, key, ttl, fresh)
+      if (isNonempty(fresh)) {
+        return { data: fresh, stale: false, cachedAt: Date.now() }
+      }
+      const backup = await readBackup<T>(redis, key)
+      if (backup) return { data: backup.data, stale: true, cachedAt: backup.cachedAt }
+      return { data: fresh, stale: false, cachedAt: Date.now() }
+    } catch {
+      await markUpstreamBackoff(redis)
+      const backup = await readBackup<T>(redis, key)
+      if (backup) return { data: backup.data, stale: true, cachedAt: backup.cachedAt }
+      throw new Error('upstream_unavailable')
+    }
+  })()
+
+  inflight.set(key, work as Promise<CacheResult<unknown>>)
+  try {
+    return await work
+  } finally {
+    inflight.delete(key)
   }
 }
 

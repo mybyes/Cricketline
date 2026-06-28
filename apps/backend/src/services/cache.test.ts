@@ -48,6 +48,15 @@ test('cached: an empty result never overwrites a good backup', async () => {
   assert.deepEqual(res.data, [{ real: true }], 'empty must not shadow the real backup')
 })
 
+test('cached: a burst of concurrent misses coalesces to ONE fetch (single-flight)', async () => {
+  const r = fakeRedis()
+  let calls = 0
+  const fetcher = async () => { calls++; await new Promise((res) => setTimeout(res, 20)); return [{ ok: 1 }] }
+  const results = await Promise.all(Array.from({ length: 25 }, () => cached(r, 'k:herd', 60, fetcher)))
+  assert.equal(calls, 1, 'a concurrent burst must trigger exactly one upstream fetch')
+  assert.ok(results.every((x) => (x.data as { ok: number }[])[0].ok === 1), 'all callers get the fresh data')
+})
+
 test('cached: total failure with no backup arms the backoff (documents the sharp edge)', async () => {
   const r = fakeRedis()
   await assert.rejects(() => cached(r, 'k:dead', 60, async () => { throw new Error('x') }))

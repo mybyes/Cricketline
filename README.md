@@ -96,6 +96,7 @@ SEED_DATA=1                          # force demo mode even with a key (dev)
 DATABASE_URL=…                       # optional Supabase Postgres (else Redis) for favorites/users
 ALLOWED_ORIGINS=https://your-web.app # required in prod for cookie auth (CORS credentials)
 GOOGLE_CLIENT_ID=…  AUTH_JWT_SECRET=… # enable Google sign-in (see AUTH.md)
+RATE_LIMIT_MAX=200                   # per-IP requests/min (default 200)
 ```
 
 **`apps/web/.env.local`**
