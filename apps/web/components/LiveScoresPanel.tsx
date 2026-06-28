@@ -6,6 +6,7 @@ import type { Match } from '@/lib/api'
 import { getPublicApiUrl } from '@/lib/apiUrl'
 import { staleNotice } from '@/lib/cacheTime'
 import { loadHomeCache, mergeMatchList, saveHomeCache } from '@/lib/matchCache'
+import { usePolling } from '@/lib/usePolling'
 import { TeamBadge } from './TeamBadge'
 
 const API = getPublicApiUrl()
@@ -159,17 +160,18 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
       : null)
   }, [])
 
-  useEffect(() => {
-    const id = setInterval(load, 15_000)
-    return () => clearInterval(id)
-  }, [load])
+  // Fallback poll (SSE is primary) — paused while the tab is hidden / offline, slowed on Save-Data.
+  usePolling(load, 15_000)
 
   // Real-time push: subscribe to the SSE stream and apply live updates instantly.
-  // EventSource auto-reconnects; the 15s poll above stays as a fallback.
+  // Connection is held only while the tab is visible — on a hidden tab we close it, which
+  // stops the client receiving pushes AND (via the backend's client gating) stops the server
+  // publishing for us. Saves bandwidth on low/metered connections; reopens on return.
   useEffect(() => {
     if (typeof window === 'undefined' || !('EventSource' in window)) return
-    const es = new EventSource(`${API}/stream`)
-    es.addEventListener('scores', (e) => {
+    let es: EventSource | null = null
+
+    const onMsg = (e: Event) => {
       try {
         const body = JSON.parse((e as MessageEvent).data) as { data?: Match[] }
         if (Array.isArray(body.data) && body.data.length) {
@@ -177,9 +179,22 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
           setStreaming(true)
         }
       } catch { /* ignore malformed frame */ }
-    })
-    es.onerror = () => setStreaming(false)
-    return () => es.close()
+    }
+    const connect = () => {
+      if (es || document.visibilityState !== 'visible') return
+      es = new EventSource(`${API}/stream`)
+      es.addEventListener('scores', onMsg)
+      es.onerror = () => setStreaming(false)
+    }
+    const disconnect = () => { es?.close(); es = null; setStreaming(false) }
+    const onVisibility = () => { document.visibilityState === 'visible' ? connect() : disconnect() }
+
+    connect()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      disconnect()
+    }
   }, [])
 
   const list = tab === 'live' ? live : tab === 'recent' ? recent : upcoming

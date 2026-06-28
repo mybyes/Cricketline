@@ -35,7 +35,7 @@ export function AuthButton() {
     <div className="auth-menu" onClick={(e) => e.stopPropagation()}>
       <button className="auth-avatar" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
         {user.picture
-          ? <img src={user.picture} alt="" width={30} height={30} referrerPolicy="no-referrer" />
+          ? <img src={user.picture} alt="" width={30} height={30} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
           : <span className="auth-avatar-fallback">{initials}</span>}
       </button>
       {open && (
