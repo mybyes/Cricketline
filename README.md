@@ -34,6 +34,12 @@ pnpm dev:mobile      # Expo — press w for browser, a for Android, or scan the 
 That's it — with **zero configuration** the whole stack runs on a built-in demo dataset. The
 clients default to `http://localhost:3000` in dev, so nothing else to wire up.
 
+```bash
+pnpm test            # unit tests (backend fallback chain + auth + logic, web win-prob math)
+```
+Tests use Node's built-in runner via tsx — no extra test framework. They're excluded from the
+production build.
+
 ---
 
 ## How the data works (demo → live)

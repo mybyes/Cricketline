@@ -49,7 +49,7 @@ type CricResponse = {
 }
 
 /** Daily-hit limit reached (or out of credits) — rotate to the next key rather than failing. */
-function isQuotaError(data: CricResponse): boolean {
+export function isQuotaError(data: CricResponse): boolean {
   const info = data.info
   if (info && typeof info.hitsLimit === 'number' && typeof info.hitsToday === 'number' && info.hitsToday >= info.hitsLimit) {
     return true
@@ -347,7 +347,7 @@ function scoreForTeam(team: string, scores: Score[]) {
   return scores.find((s) => s.inning.toLowerCase().includes(key))
 }
 
-function detectWinner(m: { teams: string[]; status: string; score?: Score[] }): string | null {
+export function detectWinner(m: { teams: string[]; status: string; score?: Score[] }): string | null {
   const [a, b] = m.teams
   const status = m.status.toLowerCase()
 
@@ -382,7 +382,7 @@ function detectWinner(m: { teams: string[]; status: string; score?: Score[] }): 
   return null
 }
 
-function buildStandingsFromMatches(matches: { teams: string[]; status: string; matchEnded: boolean; score?: Score[] }[]) {
+export function buildStandingsFromMatches(matches: { teams: string[]; status: string; matchEnded: boolean; score?: Score[] }[]) {
   const table = new Map<string, { team: string; m: number; w: number; l: number; t: number; nr: number; pts: number }>()
 
   const ensure = (team: string) => {

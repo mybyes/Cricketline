@@ -16,6 +16,7 @@
     "build:mobile:web": "pnpm --filter mobile build:web",
     "build:backend": "pnpm --filter backend build",
     "start:backend": "pnpm --filter backend start",
+    "test": "pnpm --filter backend test && pnpm --filter web test",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down"
   },
