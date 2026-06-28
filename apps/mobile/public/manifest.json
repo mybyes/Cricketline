@@ -1,6 +1,6 @@
 {
-  "name": "CricketFast — Live Cricket Scores",
-  "short_name": "CricketFast",
+  "name": "LiveLine Guru — Live Cricket Scores",
+  "short_name": "LiveLine Guru",
   "description": "Live cricket scores, scorecards and upcoming matches. No login required.",
   "start_url": "/",
   "display": "standalone",

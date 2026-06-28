@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ q?: string }> }): Promise<Metadata> {
   const { q } = await searchParams
-  const title = q ? `Search: ${q} | CricketFast` : 'Search | CricketFast'
+  const title = q ? `Search: ${q} | LiveLine Guru` : 'Search | LiveLine Guru'
   return { title, description: 'Search live cricket scores, teams, series and matches.', robots: { index: false } }
 }
 

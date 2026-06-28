@@ -44,7 +44,7 @@ export function AuthButton() {
             <p className="auth-name">{user.name ?? 'Signed in'}</p>
             {user.email && <p className="auth-email">{user.email}</p>}
           </div>
-          <p className="auth-note">Match alerts are available in the CricketFast app.</p>
+          <p className="auth-note">Match alerts are available in the LiveLine Guru app.</p>
           <button className="auth-signout" onClick={() => { setOpen(false); void signOut() }} role="menuitem">
             Sign out
           </button>

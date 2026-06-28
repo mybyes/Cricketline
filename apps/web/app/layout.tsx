@@ -11,9 +11,9 @@ const display = Space_Grotesk({ subsets: ['latin'], weight: ['500', '600', '700'
 const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cricketfastliveline.in'
 
 export const metadata: Metadata = {
-  title: 'CricketFast Live Line — Live Cricket Scores, IPL & Ball by Ball',
+  title: 'LiveLine Guru — Live Cricket Scores, IPL & Ball by Ball',
   description: 'Live cricket scores, ball-by-ball commentary, scorecards, fixtures, series, rankings and points tables — IPL, Tests, ODIs & T20.',
-  applicationName: 'CricketFast Live Line',
+  applicationName: 'LiveLine Guru',
   keywords: [
     'live cricket line', 'cricket live line', 'live line app', 'ball by ball live',
     'live cricket score', 'cricket scorecard', 'IPL live score', 'cricket live line app',
@@ -21,17 +21,17 @@ export const metadata: Metadata = {
   ],
   metadataBase: new URL(site),
   openGraph: {
-    title: 'CricketFast Live Line — Live Cricket Scores',
+    title: 'LiveLine Guru — Live Cricket Scores',
     description: 'Real-time cricket scores, scorecards and ball-by-ball commentary.',
     url: site,
-    siteName: 'CricketFast',
+    siteName: 'LiveLine Guru',
     locale: 'en_IN',
     type: 'website',
-    images: [{ url: `${site}/og.svg`, width: 1200, height: 630, alt: 'CricketFast Live Line' }],
+    images: [{ url: `${site}/og.svg`, width: 1200, height: 630, alt: 'LiveLine Guru' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CricketFast Live Line',
+    title: 'LiveLine Guru',
     description: 'Live cricket scores — IPL, Tests, ODIs & T20',
     images: [`${site}/og.svg`],
   },

@@ -1,4 +1,4 @@
-# CricketFast (Cricketline)
+# LiveLine Guru (Cricketline)
 
 **Live cricket scores, ball-by-ball, scorecards & fixtures** — fast, free, and fully usable
 without an account. A monorepo with one backend feeding a web portal and an Android/iOS app.

@@ -7,7 +7,7 @@ import { getLiveMatches, getRecentMatches, getUpcomingMatches } from '@/lib/api'
 export const revalidate = 30
 
 export const metadata: Metadata = {
-  title: 'All Cricket Matches — Live, Upcoming & Results | CricketFast',
+  title: 'All Cricket Matches — Live, Upcoming & Results | LiveLine Guru',
   description: 'Every cricket match in one place — live scores, upcoming fixtures and recent results across all formats.',
   alternates: { canonical: '/matches' },
 }

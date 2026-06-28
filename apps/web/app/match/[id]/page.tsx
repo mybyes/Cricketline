@@ -38,13 +38,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const { data } = await loadMatch(id)
   const site = getSiteUrl()
-  if (!data) return { title: 'Match not found | CricketFast' }
+  if (!data) return { title: 'Match not found | LiveLine Guru' }
   const teams = data.teams.join(' vs ')
   const scoreStr = data.score?.map((s) => `${s.r}/${s.w}`).join(' · ') ?? ''
-  const title = `${teams} — Live Score, Scorecard & Commentary | CricketFast`
+  const title = `${teams} — Live Score, Scorecard & Commentary | LiveLine Guru`
   const description = `${data.status}${scoreStr ? `. ${scoreStr}` : ''}. Full scorecard, fall of wickets, squads and stats. ${data.venue}.`
   const url = `${site}/match/${id}`
-  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url, siteName: 'CricketFast', locale: 'en_IN', type: 'website' } }
+  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url, siteName: 'LiveLine Guru', locale: 'en_IN', type: 'website' } }
 }
 
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {

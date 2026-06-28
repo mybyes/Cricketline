@@ -6,7 +6,7 @@ import { FALLBACK_SERIES, getSeriesList } from '@/lib/api'
 export const revalidate = 300
 
 export const metadata: Metadata = {
-  title: 'Cricket Series & Tournaments | CricketFast',
+  title: 'Cricket Series & Tournaments | LiveLine Guru',
   description: 'Browse current and upcoming cricket series and tournaments — standings, fixtures and results.',
   alternates: { canonical: '/series' },
 }

@@ -6,7 +6,7 @@ import { getRecentMatches } from '@/lib/api'
 export const revalidate = 120
 
 export const metadata: Metadata = {
-  title: 'Cricket Results & Recent Scores | CricketFast',
+  title: 'Cricket Results & Recent Scores | LiveLine Guru',
   description: 'Recent cricket results and completed match scorecards — IPL, Tests, ODIs and T20.',
   alternates: { canonical: '/results' },
 }

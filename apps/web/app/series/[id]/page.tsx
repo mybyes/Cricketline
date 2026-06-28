@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { data } = await getSeriesTableFull(id)
   const name = data?.seriesName ?? 'Series'
   return {
-    title: `${name} — Standings, Fixtures & Results | CricketFast`,
+    title: `${name} — Standings, Fixtures & Results | LiveLine Guru`,
     description: `${name} points table, fixtures and results.`,
     alternates: { canonical: `/series/${id}` },
   }

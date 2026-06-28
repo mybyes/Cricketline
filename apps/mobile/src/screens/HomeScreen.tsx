@@ -175,7 +175,7 @@ export function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <AppHeader
-        title="CricketFast"
+        title="LiveLine Guru"
         subtitle="Live cricket line"
         right={matchCount > 0 ? (
           <View style={styles.pill}><Text style={styles.pillT}>{live.length}</Text></View>

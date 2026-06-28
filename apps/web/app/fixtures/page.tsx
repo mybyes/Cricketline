@@ -6,7 +6,7 @@ import { getUpcomingMatches } from '@/lib/api'
 export const revalidate = 120
 
 export const metadata: Metadata = {
-  title: 'Cricket Fixtures & Schedule — Upcoming Matches | CricketFast',
+  title: 'Cricket Fixtures & Schedule — Upcoming Matches | LiveLine Guru',
   description: 'Upcoming cricket fixtures and full match schedule across IPL, internationals and T20 leagues.',
   alternates: { canonical: '/fixtures' },
 }

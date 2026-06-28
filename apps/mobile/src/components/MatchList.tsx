@@ -76,7 +76,7 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
 
       {stale && notice && <StaleBanner message={notice} />}
 
-      {liveCount > 0 && headerTitle === 'CricketFast' && (
+      {liveCount > 0 && headerTitle === 'LiveLine Guru' && (
         <View style={styles.liveBar}>
           <View style={styles.liveDot} />
           <Text style={styles.liveText}>{liveCount} live · refreshes every {pollMs / 1000}s</Text>

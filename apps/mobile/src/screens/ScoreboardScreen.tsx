@@ -324,7 +324,7 @@ export function ScoreboardScreen() {
   const shareScore = async () => {
     if (!data) return
     const line = data.score?.map((s) => `${s.inning}: ${s.r}/${s.w}`).join(' · ') ?? data.status
-    await Share.share({ message: `🏏 ${data.teams.join(' vs ')}\n${line}\n${data.status}\n· CricketFast` })
+    await Share.share({ message: `🏏 ${data.teams.join(' vs ')}\n${line}\n${data.status}\n· LiveLine Guru` })
   }
 
   const switchMatch = (m: Match) => {

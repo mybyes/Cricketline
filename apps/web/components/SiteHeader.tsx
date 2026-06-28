@@ -20,9 +20,9 @@ export function SiteHeader() {
       <div className="container header-inner">
         <div className="brand">
           <Link href="/" className="brand-link">
-            <span className="brand-mark" aria-hidden>CF</span>
+            <span className="brand-mark" aria-hidden>LG</span>
             <div>
-              <p className="brand-title">CricketFast</p>
+              <p className="brand-title">LiveLine Guru</p>
               <p className="brand-tagline">Live scores &amp; live line</p>
             </div>
           </Link>

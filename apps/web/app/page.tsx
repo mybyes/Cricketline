@@ -12,7 +12,7 @@ import { getSiteUrl } from '@/lib/site'
 export const revalidate = 15
 
 export const metadata: Metadata = {
-  title: 'CricketFast Live Line — Live Cricket Scores & Ball by Ball',
+  title: 'LiveLine Guru — Live Cricket Scores & Ball by Ball',
   description: 'Fast live cricket line: real-time scores, ball-by-ball commentary, session & rate analytics, scorecards, squads and fixtures — IPL, Tests, ODIs & T20. Free, no login.',
   keywords: [
     'live cricket line', 'cricket live line', 'live line app', 'ball by ball live',
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: getSiteUrl() },
   openGraph: {
-    title: 'CricketFast Live Line — Live Cricket Scores & Ball by Ball',
+    title: 'LiveLine Guru — Live Cricket Scores & Ball by Ball',
     description: 'Real-time cricket scores, ball-by-ball, session & rate analytics — IPL, Tests, ODIs & T20.',
     url: getSiteUrl(),
     type: 'website',
@@ -31,16 +31,16 @@ export const metadata: Metadata = {
 // FAQ — visible content below mirrors this exactly (Google wants the schema to match the page).
 const FAQ = [
   {
-    q: 'Is CricketFast a live cricket line app?',
-    a: 'Yes — CricketFast is a fast live cricket line with real-time ball-by-ball updates, live scores, session and rate analytics, full scorecards and squads, on both web and Android.',
+    q: 'Is LiveLine Guru a live cricket line app?',
+    a: 'Yes — LiveLine Guru is a fast live cricket line with real-time ball-by-ball updates, live scores, session and rate analytics, full scorecards and squads, on both web and Android.',
   },
   {
     q: 'How fast do the live scores update?',
     a: 'Scores and ball-by-ball refresh in real time over a live stream, updating through every over of a match without reloading the page.',
   },
   {
-    q: 'Is CricketFast free and do I need to log in?',
-    a: 'CricketFast is free and fully usable without an account. Sign-in is optional and only adds match notifications.',
+    q: 'Is LiveLine Guru free and do I need to log in?',
+    a: 'LiveLine Guru is free and fully usable without an account. Sign-in is optional and only adds match notifications.',
   },
   {
     q: 'Which formats and leagues are covered?',
@@ -61,7 +61,7 @@ const faqJsonLd = {
 const appJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'CricketFast — Live Cricket Line',
+  name: 'LiveLine Guru — Live Cricket Line',
   applicationCategory: 'SportsApplication',
   operatingSystem: 'Android, Web',
   url: getSiteUrl(),
@@ -72,7 +72,7 @@ const appJsonLd = {
 const orgJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'CricketFast',
+  name: 'LiveLine Guru',
   url: getSiteUrl(),
   logo: `${getSiteUrl()}/og.svg`,
   sameAs: ['https://x.com/ChaiPeCric'],
@@ -95,7 +95,7 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'WebSite',
-        name: 'CricketFast Live Line',
+        name: 'LiveLine Guru',
         url: getSiteUrl(),
         description: 'Live cricket scores, ball-by-ball updates and scorecards for IPL, Tests, ODIs and T20.',
         potentialAction: {
@@ -126,7 +126,7 @@ export default async function HomePage() {
           <section className="seo-block" id="download">
             <h2>A faster cricket live line</h2>
             <p>
-              CricketFast is a real-time cricket <strong>live line</strong> — <strong>ball-by-ball</strong> updates,
+              LiveLine Guru is a real-time cricket <strong>live line</strong> — <strong>ball-by-ball</strong> updates,
               live scores, <strong>session &amp; rate</strong> analytics, full scorecards, squads and fixtures across
               the IPL, internationals and major T20 leagues. It streams live (no manual refresh), works on web and as a
               free Android app, and needs no login. Looking for a fast live-line app? Tap any match for the full
@@ -155,7 +155,7 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="widget widget-cta">
-            <div className="widget-head">CricketFast App</div>
+            <div className="widget-head">LiveLine Guru App</div>
             <div className="widget-body download-box">
               <p>Faster live line on Android.</p>
               <AppDownloadButton />

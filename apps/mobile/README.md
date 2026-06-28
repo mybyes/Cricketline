@@ -1,4 +1,4 @@
-# CricketFast — Android app (Expo / EAS)
+# LiveLine Guru — Android app (Expo / EAS)
 
 React Native (Expo SDK 56) live-line app. This guide covers building and shipping the Android app.
 

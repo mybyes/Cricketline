@@ -127,7 +127,7 @@ async function start() {
   setInterval(() => { liveTick().catch(() => { /* skip tick */ }) }, 8_000)
 
   app.get('/', async () => ({
-    service: 'CricketFast API',
+    service: 'LiveLine Guru API',
     status: 'ok',
     docs: {
       health: '/health',

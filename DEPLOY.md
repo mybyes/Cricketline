@@ -1,4 +1,4 @@
-# CricketFast — Deployment guide
+# LiveLine Guru — Deployment guide
 
 Monorepo: **backend** (Fastify → Railway) · **web** (Next.js → Vercel) · **mobile** (Expo → EAS).
 Shared services: **Upstash Redis** (cache + comments/poll), **Supabase** (optional Postgres), **GitHub** (`mybyes/Cricketline`).

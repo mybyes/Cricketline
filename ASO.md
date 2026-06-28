@@ -14,9 +14,10 @@ Paste these into **Play Console → Main store listing**. ASO ranking weight rou
 
 ## Title (max 30 chars)
 ```
-CricketFast: Live Cricket Line
+LiveLine Guru: Cricket Score
 ```
-(30/30 — leads with the brand, carries the primary keyword "Live Cricket Line".)
+(28/30 — the brand already carries the "live line" intent, so the keyword slot adds "cricket
+score", the highest-volume term.)
 
 ## Short description (max 80 chars)
 ```
@@ -25,7 +26,7 @@ Fast live cricket line: ball-by-ball scores, session, scorecard. Free, no login.
 
 ## Long description (max 4000 chars)
 ```
-CricketFast is a fast, free live cricket line — real-time scores and ball-by-ball updates for
+LiveLine Guru is a fast, free live cricket line — real-time scores and ball-by-ball updates for
 every match, with no login required.
 
 Follow the live line as it happens: live cricket score, ball-by-ball commentary, current run
@@ -46,7 +47,7 @@ WHY CRICKETFAST
 FORMATS & LEAGUES
 Test, ODI and T20 — internationals, the IPL and major franchise leagues.
 
-Looking for a fast live-line cricket app? CricketFast keeps the live score, ball-by-ball and
+Looking for a fast live-line cricket app? LiveLine Guru keeps the live score, ball-by-ball and
 session stats one tap away — free, no sign-up, no clutter.
 
 Live cricket scores. Live line. Ball by ball. Session & rates. Scorecard. Free.

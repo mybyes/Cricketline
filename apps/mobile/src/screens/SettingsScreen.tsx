@@ -67,7 +67,7 @@ export function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.label}>ABOUT</Text>
         <View style={styles.card}>
-          <Text style={styles.title}>CricketFast</Text>
+          <Text style={styles.title}>LiveLine Guru</Text>
           <Text style={styles.val}>Version {APP_VERSION}</Text>
           <Text style={styles.hint}>Live cricket scores, scorecards and fixtures. Free to use.</Text>
         </View>

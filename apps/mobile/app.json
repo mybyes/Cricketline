@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CricketFast Live Line",
+    "name": "LiveLine Guru",
     "slug": "cricketfast",
     "owner": "mybyess-team",
     "version": "1.0.0",
@@ -31,8 +31,8 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "CricketFast — Live Cricket Scores",
-      "shortName": "CricketFast",
+      "name": "LiveLine Guru — Live Cricket Scores",
+      "shortName": "LiveLine Guru",
       "description": "Live cricket scores, scorecards and upcoming matches. No login required.",
       "themeColor": "#0a3f27",
       "backgroundColor": "#f0f2f0",

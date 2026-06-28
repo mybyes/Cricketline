@@ -5,7 +5,7 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="container footer-grid">
         <div>
-          <strong>CricketFast Live Line</strong>
+          <strong>LiveLine Guru</strong>
           <p>Live cricket scores, ball-by-ball updates, scorecards and fixtures.</p>
         </div>
         <div>
@@ -33,7 +33,7 @@ export function SiteFooter() {
         </p>
       </div>
       <div className="container footer-copy">
-        <p>© {new Date().getFullYear()} CricketFast · cricketfastliveline.in</p>
+        <p>© {new Date().getFullYear()} LiveLine Guru · cricketfastliveline.in</p>
         <p>Data via CricAPI · Not affiliated with ICC or BCCI</p>
       </div>
     </footer>

@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   const { name } = await params
   const team = decodeURIComponent(name)
   return {
-    title: `${team} — Live Scores, Fixtures, Results & Ranking | CricketFast`,
+    title: `${team} — Live Scores, Fixtures, Results & Ranking | LiveLine Guru`,
     description: `Follow ${team}: live scores, upcoming fixtures, recent results and ICC ranking.`,
     alternates: { canonical: `/team/${encodeURIComponent(team)}` },
   }

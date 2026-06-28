@@ -6,7 +6,7 @@ import { getRankings, type PlayerRank, type RankRow } from '@/lib/api'
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'ICC Cricket Rankings — Teams & Players (Test, ODI, T20) | CricketFast',
+  title: 'ICC Cricket Rankings — Teams & Players (Test, ODI, T20) | LiveLine Guru',
   description: 'Latest ICC cricket rankings for teams and players across Test, ODI and T20 formats.',
   alternates: { canonical: '/rankings' },
 }

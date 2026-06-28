@@ -6,7 +6,7 @@ import { getLiveMatches } from '@/lib/api'
 export const revalidate = 15
 
 export const metadata: Metadata = {
-  title: 'Live Cricket Scores — Ball by Ball | CricketFast',
+  title: 'Live Cricket Scores — Ball by Ball | LiveLine Guru',
   description: 'Live cricket scores and ball-by-ball updates for all ongoing matches — IPL, Tests, ODIs and T20.',
   alternates: { canonical: '/live' },
 }

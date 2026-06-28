@@ -1,4 +1,4 @@
-# CricketFast — Web app (Next.js / Vercel)
+# LiveLine Guru — Web app (Next.js / Vercel)
 
 Next.js 15 SSR portal (live scores, scorecards, series, rankings, teams, search, real-time SSE).
 Deployed on **Vercel**, talks to the **backend** on Railway.

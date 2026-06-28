@@ -5,7 +5,7 @@ export function AppHeader({ title, subtitle, right }: { title: string; subtitle?
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
-        <View style={styles.logoBox}><Text style={styles.logoText}>CF</Text></View>
+        <View style={styles.logoBox}><Text style={styles.logoText}>LG</Text></View>
         <View style={styles.titles}>
           <Text style={styles.title}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
