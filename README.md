@@ -3,6 +3,9 @@
 **Live cricket scores, ball-by-ball, scorecards & fixtures** — fast, free, and fully usable
 without an account. A monorepo with one backend feeding a web portal and an Android/iOS app.
 
+> 📓 **Resuming work / new machine / fresh session?** Read **[PROJECT_LOG.md](PROJECT_LOG.md)**
+> first — it captures the decisions, rationale, brand history, and open items.
+
 ```
             ┌──────────────┐   SSE + REST    ┌────────────────────┐
  CricAPI ──▶│  Fastify API │ ───────────────▶│  Next.js web (SEO) │
