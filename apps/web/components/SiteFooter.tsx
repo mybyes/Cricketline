@@ -33,7 +33,7 @@ export function SiteFooter() {
         </p>
       </div>
       <div className="container footer-copy">
-        <p>© {new Date().getFullYear()} LiveLine Guru · cricketfastliveline.in</p>
+        <p>© {new Date().getFullYear()} LiveLine Guru · livelineguru.in</p>
         <p>Data via CricAPI · Not affiliated with ICC or BCCI</p>
       </div>
     </footer>

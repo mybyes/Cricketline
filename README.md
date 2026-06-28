@@ -102,7 +102,7 @@ RATE_LIMIT_MAX=200                   # per-IP requests/min (default 200)
 **`apps/web/.env.local`**
 ```bash
 NEXT_PUBLIC_API_URL=https://your-backend.up.railway.app
-NEXT_PUBLIC_SITE_URL=https://cricketfastliveline.in
+NEXT_PUBLIC_SITE_URL=https://livelineguru.in
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=…        # optional — shows the Google button
 ```
 

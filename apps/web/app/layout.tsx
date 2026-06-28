@@ -8,7 +8,7 @@ export const viewport: Viewport = { themeColor: '#0a3f27' }
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' })
 const display = Space_Grotesk({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-display', display: 'swap' })
 
-const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cricketfastliveline.in'
+const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://livelineguru.in'
 
 export const metadata: Metadata = {
   title: 'LiveLine Guru — Live Cricket Scores, IPL & Ball by Ball',

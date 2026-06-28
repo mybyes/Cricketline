@@ -34,7 +34,7 @@ Pushing to `master` only deploys **after** the project is connected once:
    |---|---|
    | `API_URL` | `https://backend-production-233f.up.railway.app` (server-side fetch) |
    | `NEXT_PUBLIC_API_URL` | same (client-side fetch / SSE stream) |
-   | `NEXT_PUBLIC_SITE_URL` | `https://cricketfastliveline.in` (canonical / sitemap) |
+   | `NEXT_PUBLIC_SITE_URL` | `https://livelineguru.in` (canonical / sitemap) |
    | `NEXT_PUBLIC_ANDROID_APP_URL` | *(optional)* Play Store URL once the app is live |
 
 4. Deploy → test the `*.vercel.app` URL.
@@ -42,7 +42,7 @@ Pushing to `master` only deploys **after** the project is connected once:
 After this, **every push to `master` auto-deploys**; branches get preview URLs.
 
 ## 4. Custom domain
-Vercel → Project → **Domains** → add `cricketfastliveline.in`, then update the registrar/DNS per
+Vercel → Project → **Domains** → add `livelineguru.in`, then update the registrar/DNS per
 Vercel's instructions.
 > ⚠️ That domain currently serves a **different** site — adding it here replaces it.
 

@@ -5,6 +5,6 @@
   "env": {
     "API_URL": "https://backend-production-233f.up.railway.app",
     "NEXT_PUBLIC_API_URL": "https://backend-production-233f.up.railway.app",
-    "NEXT_PUBLIC_SITE_URL": "https://cricketfastliveline.in"
+    "NEXT_PUBLIC_SITE_URL": "https://livelineguru.in"
   }
 }
