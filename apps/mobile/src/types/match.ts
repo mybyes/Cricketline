@@ -15,15 +15,18 @@ export interface Match {
 }
 
 export type RootStackParamList = {
-  Home: undefined
+  List: undefined
+  MoreHome: undefined
+  Favorites: undefined
   Scoreboard: { matchId: string; matchName: string; seriesId?: string; matchType?: string }
+  SeriesTable: { seriesId: string; seriesName?: string }
 }
 
 export type RootTabParamList = {
-  Live: undefined
-  Upcoming: undefined
-  Favorites: undefined
-  Settings: undefined
+  Home: undefined
+  Matches: undefined
+  Series: undefined
+  More: undefined
 }
 
 export interface LiveMatchesResponse {

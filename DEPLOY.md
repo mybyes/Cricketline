@@ -1,4 +1,4 @@
-# LiveLine Guru — Deployment guide
+# Cricket Pulse — Deployment guide
 
 Monorepo: **backend** (Fastify → Railway) · **web** (Next.js → Vercel) · **mobile** (Expo → EAS).
 Shared services: **Upstash Redis** (cache + comments/poll), **Supabase** (optional Postgres), **GitHub** (`mybyes/Cricketline`).
@@ -26,9 +26,26 @@ Connected to the repo; redeploys on push to `master`. Set these **Variables**:
 | `DATABASE_URL` | optional | Supabase Postgres → persistent comments/favorites (else Redis fallback) |
 | `ALLOWED_ORIGINS` | prod recommended | comma-separated CORS allow-list (unset = allow all) |
 | `COMMENTS_ENABLED` | optional | `0` disables the comments feature |
+| `THE_ODDS_API_KEY` | optional | [the-odds-api.com](https://the-odds-api.com) key — match-winner (h2h) rates, matched by team name |
+| `THE_ODDS_REGIONS` | optional | Bookmaker regions (default `uk,au`) |
+| `ODDS_API_URL` | optional | Custom **display-only** odds feed base URL (or template with `{id}`) |
+| `ODDS_API_KEY` | optional | Bearer token for custom odds feed |
+| `PUSH_ENABLED` | optional | `1` enables wicket push watcher — **off by default** |
 | `PORT` | optional | defaults to 3000 (Railway sets this) |
 
 Local: copy `apps/backend/.env.example` → `.env`, then `pnpm dev:backend`.
+
+### Display-only odds (info app — not a bookmaker)
+
+The product shows match odds + session/fancy rates; it never accepts wagers.
+
+| Mode | Env | Behaviour |
+|---|---|---|
+| Demo (default) | unset `ODDS_API_URL` + `SEED_DATA=1` | Seed matches get a simulated live line over SSE |
+| Live markets | set `ODDS_API_URL` | Backend fetches `GET {url}/match/{id}/odds` (or `{id}` template) |
+
+Feed JSON shape: see [`docs/odds-feed.example.json`](docs/odds-feed.example.json).  
+Health check: `GET /health` → `"odds":"seed"|"feed"|"unset"`.
 
 ---
 

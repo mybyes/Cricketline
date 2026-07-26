@@ -62,8 +62,6 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
     return () => clearInterval(poll)
   }, [load, pollMs])
 
-  const liveCount = matches.filter((m) => m.matchStarted && !m.matchEnded).length
-
   return (
     <View style={styles.container}>
       <AppHeader
@@ -75,13 +73,6 @@ export function MatchList({ headerTitle, headerSubtitle, emptyText, fetcher, pol
       />
 
       {stale && notice && <StaleBanner message={notice} />}
-
-      {liveCount > 0 && headerTitle === 'LiveLine Guru' && (
-        <View style={styles.liveBar}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>{liveCount} live · refreshes every {pollMs / 1000}s</Text>
-        </View>
-      )}
 
       {loading && !refreshing && matches.length === 0 ? (
         <ActivityIndicator color={colors.accent} style={styles.loader} />
@@ -119,9 +110,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   countPill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   countText: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  liveBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.surfaceAlt },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live },
-  liveText: { fontSize: 12, fontWeight: '600', color: colors.score },
   list: { paddingTop: 8, paddingBottom: 24 },
   loader: { marginTop: 48 },
   empty: { color: colors.textDim, textAlign: 'center', marginTop: 48, fontSize: 14 },

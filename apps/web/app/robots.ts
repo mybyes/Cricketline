@@ -1,10 +1,13 @@
 import type { MetadataRoute } from 'next'
-
-const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://livelineguru.in'
+import { getSiteUrl } from '@/lib/site'
 
 export default function robots(): MetadataRoute.Robots {
+  const site = getSiteUrl()
   return {
-    rules: { userAgent: '*', allow: '/' },
+    rules: [
+      { userAgent: '*', allow: '/', disallow: ['/search'] },
+    ],
     sitemap: `${site}/sitemap.xml`,
+    host: site.replace(/^https?:\/\//, ''),
   }
 }

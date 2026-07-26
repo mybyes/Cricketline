@@ -1,19 +1,18 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
-import { Commentary } from '@/components/Commentary'
-import { LiveSummary } from '@/components/LiveSummary'
+import { AdSlot } from '@/components/AdSlot'
+import { ChaseStrip } from '@/components/ChaseStrip'
 import { MatchTabs, type MatchTab } from '@/components/MatchTabs'
-import { PredictionPoll } from '@/components/PredictionPoll'
 import { PageRefresher } from '@/components/PageRefresher'
-import { RatesPanel } from '@/components/RatesPanel'
 import { Scorecard } from '@/components/Scorecard'
-import { SessionAnalytics } from '@/components/SessionAnalytics'
-import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Squads } from '@/components/Squads'
-import { WinProbability } from '@/components/WinProbability'
-import { getBallByBall, getScorecard, getSquad, type BbbBall, type ScorecardData, type SquadTeam } from '@/lib/api'
+import { LastBallBanner } from '@/components/LastBallBanner'
+import { MatchHistory } from '@/components/MatchHistory'
+import { OddsPanel } from '@/components/OddsPanel'
+import { getBallByBall, getMatchOdds, getScorecard, getSquad, type BbbBall, type MatchOddsBoard, type ScorecardData, type SquadTeam } from '@/lib/api'
+import { synthRatesBoard } from '@/lib/matchRates'
 import { getSiteUrl } from '@/lib/site'
 import { teamColor } from '@/lib/teamColors'
 
@@ -24,13 +23,25 @@ function seriesOf(name: string) {
   return parts.length >= 2 ? parts[parts.length - 1] : ''
 }
 
-async function loadMatch(id: string): Promise<{ data: ScorecardData | null; bbb: BbbBall[]; squads: SquadTeam[] }> {
-  const [score, bbb, squad] = await Promise.all([getScorecard(id), getBallByBall(id), getSquad(id)])
+async function loadMatch(id: string): Promise<{
+  data: ScorecardData | null
+  bbb: BbbBall[]
+  squads: SquadTeam[]
+  odds: MatchOddsBoard | null
+}> {
+  const [score, bbb, squad, odds] = await Promise.all([
+    getScorecard(id),
+    getBallByBall(id),
+    getSquad(id),
+    getMatchOdds(id),
+  ])
   const data = score.data && typeof score.data === 'object' && 'teams' in score.data ? score.data : null
+  const oddsBoard = odds.data && Array.isArray(odds.data.matchOdds) ? odds.data : null
   return {
     data,
     bbb: Array.isArray(bbb.data) ? bbb.data : [],
     squads: Array.isArray(squad.data) ? squad.data : [],
+    odds: oddsBoard,
   }
 }
 
@@ -38,18 +49,39 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const { data } = await loadMatch(id)
   const site = getSiteUrl()
-  if (!data) return { title: 'Match not found | LiveLine Guru' }
+  if (!data) return { title: 'Match not found' }
   const teams = data.teams.join(' vs ')
   const scoreStr = data.score?.map((s) => `${s.r}/${s.w}`).join(' · ') ?? ''
-  const title = `${teams} — Live Score, Scorecard & Commentary | LiveLine Guru`
-  const description = `${data.status}${scoreStr ? `. ${scoreStr}` : ''}. Full scorecard, fall of wickets, squads and stats. ${data.venue}.`
+  const live = data.matchStarted && !data.matchEnded
+  const title = `${teams} — Live Line, History & Scorecard`
+  const description = `${data.status}${scoreStr ? `. ${scoreStr}` : ''}. Live line with display-only odds, match history, scorecard and squads. ${data.venue}.`
   const url = `${site}/match/${id}`
-  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url, siteName: 'LiveLine Guru', locale: 'en_IN', type: 'website' } }
+  const ogTitle = live ? `${teams} Live Line & Score` : `${teams} Scorecard & Result`
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: ogTitle,
+      description,
+      url,
+      siteName: 'Cricket Pulse',
+      locale: 'en_IN',
+      type: 'website',
+      images: [{ url: `${site}/og.svg`, width: 1200, height: 630, alt: teams }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description,
+      images: [`${site}/og.svg`],
+    },
+  }
 }
 
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { data, bbb, squads } = await loadMatch(id)
+  const { data, bbb, squads, odds } = await loadMatch(id)
   if (!data) notFound()
 
   const site = getSiteUrl()
@@ -64,30 +96,58 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     inning.toLowerCase().includes((data.teams[0] ?? '').toLowerCase().split(' ')[0]) ? c0 : c1
 
   const jsonLd = {
-    '@context': 'https://schema.org', '@type': 'SportsEvent',
-    name: data.teams.join(' vs '), description: data.status,
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: data.teams.join(' vs '),
+    description: data.status,
     startDate: data.dateTimeGMT ?? data.date,
-    eventStatus: live ? 'https://schema.org/EventScheduled' : 'https://schema.org/EventCompleted',
-    location: { '@type': 'Place', name: data.venue }, url: `${site}/match/${id}`, sport: 'Cricket',
-    homeTeam: { '@type': 'SportsTeam', name: data.teams[0] }, awayTeam: { '@type': 'SportsTeam', name: data.teams[1] },
+    eventStatus: live
+      ? 'https://schema.org/EventInProgress'
+      : data.matchEnded
+        ? 'https://schema.org/EventCompleted'
+        : 'https://schema.org/EventScheduled',
+    location: { '@type': 'Place', name: data.venue },
+    url: `${site}/match/${id}`,
+    sport: 'Cricket',
+    competitor: [
+      { '@type': 'SportsTeam', name: data.teams[0] },
+      { '@type': 'SportsTeam', name: data.teams[1] },
+    ],
+    organizer: { '@type': 'Organization', name: 'Cricket Pulse', url: site },
   }
 
-  // Live tab: score summary + prediction, then Session / Rates analytics sub-tabs.
+  const batShort = data.teamInfo?.[data.score && data.score.length > 1 ? 1 : 0]?.shortname
+    ?? data.teams[data.score && data.score.length > 1 ? 1 : 0]?.split(' ').map((w) => w[0]).join('').slice(0, 3)
+    ?? 'BAT'
+  const active = data.score?.[data.score.length - 1]
+  const ballsFaced = bbb.length || (active ? Math.floor(active.o) * 6 + Math.round((active.o % 1) * 10) : 0)
+  const scoreLine = active ? `${batShort} ${active.r}-${active.w} (${ballsFaced} b)` : undefined
+
+  // Live Line: last ball + rates only. Hero already has score/status; Scorecard has batters.
   const liveContent = (
     <div className="m-live">
-      {hasScorecard && <LiveSummary data={data} bbb={bbb} />}
-      {hasScorecard && <WinProbability data={data} />}
-      {data.teams.length >= 2 && <PredictionPoll matchId={id} teams={[data.teams[0], data.teams[1]]} />}
-      {hasScorecard ? (
-        <MatchTabs tabs={[
-          { key: 'session', label: 'Session', content: <SessionAnalytics innings={innings} matchType={data.matchType} /> },
-          { key: 'rates', label: 'Rates', content: <RatesPanel data={data} /> },
-        ]} />
-      ) : (
-        <div className="empty-state"><p className="empty-title">{data.status}</p><p className="empty-sub">Session & rate analytics appear once play begins.</p></div>
+      {live && bbb.length > 0 ? <LastBallBanner bbb={bbb} scoreLine={scoreLine} /> : null}
+      <OddsPanel matchId={id} initial={odds} />
+      {hasScorecard ? <ChaseStrip data={data} /> : (
+        <div className="empty-state"><p className="empty-title">{data.status}</p><p className="empty-sub">Live line updates when play begins.</p></div>
       )}
+      <AdSlot id={`match-${id}-live`} format="rectangle" />
     </div>
   )
+
+  const histOdds = odds ?? (live ? synthRatesBoard(data, bbb) : null)
+  const historyContent = live ? (
+    <>
+      <MatchHistory
+        bbb={bbb}
+        odds={histOdds}
+        battingLabel={batShort}
+        scoreLine={scoreLine}
+        matchType={data.matchType}
+      />
+      <AdSlot id={`match-${id}-history`} format="rectangle" />
+    </>
+  ) : null
 
   const info = (
     <div className="m-info">
@@ -106,10 +166,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   )
 
   const tabs: MatchTab[] = [
-    { key: 'live', label: live ? 'Live' : 'Summary', content: liveContent },
-    { key: 'bbb', label: 'Ball by Ball', content: <Commentary bbb={bbb} /> },
+    { key: 'live', label: live ? 'Live Line' : 'Summary', content: liveContent },
+    ...(live && historyContent
+      ? [{ key: 'history', label: 'History', content: historyContent } as MatchTab]
+      : []),
     { key: 'scorecard', label: 'Scorecard', content: <Scorecard innings={innings} /> },
-    { key: 'squads', label: 'Squads', content: <Squads squads={squads} /> },
+    { key: 'squads', label: 'Squad', content: <Squads squads={squads} /> },
     { key: 'info', label: 'Info', content: info },
   ]
 
@@ -150,8 +212,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         </div>
 
         <MatchTabs tabs={tabs} />
+        <AdSlot id={`match-${id}-bottom`} format="leaderboard" />
       </div>
-      <SiteFooter />
     </>
   )
 }

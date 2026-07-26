@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications'
 import { useEffect } from 'react'
 import { Platform } from 'react-native'
+import { PUSH_ENABLED } from '../lib/notifications'
 import { openMatchFromNotification } from '../navigation/navigationRef'
 
 function matchIdFromResponse(response: Notifications.NotificationResponse | null): string | null {
@@ -11,7 +12,7 @@ function matchIdFromResponse(response: Notifications.NotificationResponse | null
 
 export function useNotificationNavigation() {
   useEffect(() => {
-    if (Platform.OS === 'web') return
+    if (!PUSH_ENABLED || Platform.OS === 'web') return
 
     Notifications.getLastNotificationResponseAsync().then((last) => {
       const matchId = matchIdFromResponse(last)

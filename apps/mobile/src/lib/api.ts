@@ -1,6 +1,7 @@
 import type { LiveMatchesResponse } from '../types/match'
 import type { ScorecardResponse } from '../types/scorecard'
 import type { BbbBall, MatchHistoryData, SeriesItem, SeriesTableData, SquadTeam } from '../types/extras'
+import type { MatchOddsBoard } from '../types/odds'
 
 import { getApiUrl as resolveApiUrl } from './apiUrl'
 
@@ -55,6 +56,18 @@ export async function fetchMatchSquad(matchId: string) {
 
 export async function fetchMatchBbb(matchId: string) {
   return api<{ success: boolean; data: BbbBall[]; error?: string; stale?: boolean }>(`/match/${matchId}/bbb`)
+}
+
+/** Display-only market board (info app — no wagering). */
+export async function fetchMatchOdds(matchId: string) {
+  return api<{ success: boolean; data: MatchOddsBoard; error?: string; stale?: boolean }>(
+    `/match/${matchId}/odds`,
+  )
+}
+
+/** All live match boards — for home multi-match odds strip. */
+export async function fetchLiveOdds() {
+  return api<{ success: boolean; data: MatchOddsBoard[]; error?: string }>('/odds/live')
 }
 
 export async function fetchMatchHistory(matchId: string) {

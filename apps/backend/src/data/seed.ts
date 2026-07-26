@@ -7,17 +7,41 @@ import type { Match } from '../services/cricapi'
 
 const team = (name: string, shortname: string) => ({ name, shortname, img: '' })
 
-/** Build a plausible ball-by-ball list for an innings from a compact `runs` script. */
-function buildBbb(innings: number, batsmen: [string, string], bowler: string, script: (number | 'W')[]) {
-  return script.map((r, i) => ({
-    ballNbr: i + 1,
-    overNum: Math.floor(i / 6) + 1,
-    innings,
-    event: r === 'W' ? 'W' : String(r),
-    runs: r === 'W' ? 0 : r,
-    batsman: batsmen[i % 2],
-    bowler,
-  }))
+/** Build a plausible ball-by-ball list. `startBall` continues numbering across overs. */
+function buildBbb(
+  innings: number,
+  batsmen: [string, string],
+  bowler: string,
+  script: (number | 'W')[],
+  startBall = 0,
+) {
+  return script.map((r, i) => {
+    const n = startBall + i
+    return {
+      ballNbr: n + 1,
+      overNum: Math.floor(n / 6) + 1,
+      innings,
+      event: r === 'W' ? 'W' : String(r),
+      runs: r === 'W' ? 0 : r,
+      batsman: batsmen[i % 2],
+      bowler,
+    }
+  })
+}
+
+/** Concatenate over scripts with continuous ballNbr / overNum. */
+function chainBbb(
+  innings: number,
+  overs: { batsmen: [string, string]; bowler: string; script: (number | 'W')[] }[],
+  startBall = 0,
+) {
+  let start = startBall
+  const out: ReturnType<typeof buildBbb> = []
+  for (const o of overs) {
+    out.push(...buildBbb(innings, o.batsmen, o.bowler, o.script, start))
+    start += o.script.length
+  }
+  return out
 }
 
 export interface SeedScorecard {
@@ -345,24 +369,109 @@ const SC_CSK_KKR: SeedScorecard = {
   ],
 }
 
+const SC_IND_ENG: SeedScorecard = {
+  id: 'seed-live-2',
+  name: 'India vs England, 2nd Test, England tour of India 2026',
+  matchType: 'test',
+  status: 'Day 2: India lead by 312 runs',
+  venue: 'MA Chidambaram Stadium, Chennai',
+  date: '2026-06-19',
+  teams: ['India', 'England'],
+  teamInfo: [team('India', 'IND'), team('England', 'ENG')],
+  score: [
+    { inning: 'India Inning 1', r: 438, w: 10, o: 121.3 },
+    { inning: 'England Inning 1', r: 226, w: 10, o: 64.2 },
+    { inning: 'India Inning 2', r: 100, w: 2, o: 28 },
+  ],
+  tossWinner: 'India',
+  tossChoice: 'bat',
+  matchStarted: true,
+  matchEnded: false,
+  scorecard: [
+    {
+      inning: 'India Inning 1',
+      totals: { r: 438, w: 10, o: 121.3 },
+      extras: { t: 18, b: 4, lb: 8, w: 4, nb: 2 },
+      batting: [
+        { batsman: { id: 'i1', name: 'Y Jaiswal' }, 'dismissal-text': 'c Root b Anderson', r: 112, b: 148, '4s': 14, '6s': 2, sr: 75.7 },
+        { batsman: { id: 'i2', name: 'R Sharma' }, 'dismissal-text': 'lbw b Stokes', r: 86, b: 132, '4s': 9, '6s': 1, sr: 65.2 },
+        { batsman: { id: 'i3', name: 'V Kohli' }, 'dismissal-text': 'c Foakes b Wood', r: 74, b: 98, '4s': 8, '6s': 1, sr: 75.5 },
+        { batsman: { id: 'i4', name: 'R Pant' }, 'dismissal-text': 'b Atkinson', r: 61, b: 55, '4s': 6, '6s': 3, sr: 110.9 },
+      ],
+      bowling: [
+        { bowler: { id: 'e1', name: 'J Anderson' }, o: 24, m: 4, r: 78, w: 3, eco: 3.25 },
+        { bowler: { id: 'e2', name: 'B Stokes' }, o: 18, m: 2, r: 66, w: 2, eco: 3.67 },
+        { bowler: { id: 'e3', name: 'M Wood' }, o: 20, m: 1, r: 92, w: 2, eco: 4.60 },
+      ],
+      fallOfWickets: [
+        { wkt: 1, player: 'Y Jaiswal', runs: 198, over: 52.3 },
+        { wkt: 2, player: 'R Sharma', runs: 286, over: 78.1 },
+      ],
+      overRuns: [],
+    },
+    {
+      inning: 'England Inning 1',
+      totals: { r: 226, w: 10, o: 64.2 },
+      extras: { t: 12, b: 2, lb: 6, w: 2, nb: 2 },
+      batting: [
+        { batsman: { id: 'e4', name: 'Z Crawley' }, 'dismissal-text': 'c Pant b Bumrah', r: 38, b: 44, '4s': 5, '6s': 0, sr: 86.4 },
+        { batsman: { id: 'e5', name: 'J Root' }, 'dismissal-text': 'b Ashwin', r: 67, b: 102, '4s': 6, '6s': 0, sr: 65.7 },
+        { batsman: { id: 'e6', name: 'H Brook' }, 'dismissal-text': 'c Kohli b Siraj', r: 41, b: 48, '4s': 4, '6s': 1, sr: 85.4 },
+      ],
+      bowling: [
+        { bowler: { id: 'i5', name: 'J Bumrah' }, o: 16, m: 3, r: 48, w: 4, eco: 3.00 },
+        { bowler: { id: 'i6', name: 'R Ashwin' }, o: 18, m: 2, r: 62, w: 3, eco: 3.44 },
+        { bowler: { id: 'i7', name: 'M Siraj' }, o: 12, m: 1, r: 44, w: 2, eco: 3.67 },
+      ],
+      fallOfWickets: [
+        { wkt: 1, player: 'Z Crawley', runs: 54, over: 12.2 },
+        { wkt: 2, player: 'J Root', runs: 148, over: 42.5 },
+      ],
+      overRuns: [],
+    },
+    {
+      inning: 'India Inning 2',
+      totals: { r: 100, w: 2, o: 28 },
+      extras: { t: 4, lb: 2, w: 1, nb: 1 },
+      batting: [
+        { batsman: { id: 'i1', name: 'Y Jaiswal' }, 'dismissal-text': 'batting', r: 48, b: 72, '4s': 6, '6s': 0, sr: 66.7 },
+        { batsman: { id: 'i2', name: 'R Sharma' }, 'dismissal-text': 'c Foakes b Anderson', r: 22, b: 41, '4s': 3, '6s': 0, sr: 53.7 },
+        { batsman: { id: 'i8', name: 'S Gill' }, 'dismissal-text': 'c Brook b Stokes', r: 12, b: 18, '4s': 2, '6s': 0, sr: 66.7 },
+        { batsman: { id: 'i3', name: 'V Kohli' }, 'dismissal-text': 'batting', r: 14, b: 27, '4s': 2, '6s': 0, sr: 51.9 },
+      ],
+      bowling: [
+        { bowler: { id: 'e1', name: 'J Anderson' }, o: 8, m: 2, r: 22, w: 1, eco: 2.75 },
+        { bowler: { id: 'e2', name: 'B Stokes' }, o: 7, m: 1, r: 28, w: 1, eco: 4.00 },
+        { bowler: { id: 'e3', name: 'M Wood' }, o: 6, m: 0, r: 24, w: 0, eco: 4.00 },
+      ],
+      fallOfWickets: [
+        { wkt: 1, player: 'R Sharma', runs: 58, over: 16.3 },
+        { wkt: 2, player: 'S Gill', runs: 78, over: 21.1 },
+      ],
+      overRuns: [],
+    },
+  ],
+}
+
 export const SEED_SCORECARDS: Record<string, SeedScorecard> = {
   'seed-live-1': SC_RCB_MI,
+  'seed-live-2': SC_IND_ENG,
   'seed-recent-1': SC_CSK_KKR,
 }
 
 export const SEED_BBB: Record<string, ReturnType<typeof buildBbb>> = {
-  // RCB v MI — Mumbai's chase, recent overs
-  'seed-live-1': [
-    ...buildBbb(2, ['Rohit Sharma', 'S Yadav'], 'M Siraj', [1, 4, 0, 6, 1, 2]),
-    ...buildBbb(2, ['S Yadav', 'Rohit Sharma'], 'J Hazlewood', [4, 1, 6, 0, 'W', 1]),
-    ...buildBbb(2, ['Rohit Sharma', 'I Kishan'], 'M Siraj', [6, 2, 1, 4, 1, 0]),
-    ...buildBbb(2, ['S Yadav', 'I Kishan'], 'G Maxwell', [1, 6, 4, 2, 1, 4]),
-  ],
-  // India 2nd innings — Test, recent over
-  'seed-live-2': [
-    ...buildBbb(3, ['R Sharma', 'Y Jaiswal'], 'J Anderson', [0, 4, 1, 0, 2, 1]),
-    ...buildBbb(3, ['Y Jaiswal', 'R Sharma'], 'B Stokes', [1, 0, 4, 0, 0, 'W']),
-  ],
+  // RCB v MI — Mumbai chase overs 11–14 (startBall = 60 → Over 11)
+  'seed-live-1': chainBbb(2, [
+    { batsmen: ['Rohit Sharma', 'S Yadav'], bowler: 'M Siraj', script: [1, 4, 0, 6, 1, 2] },
+    { batsmen: ['S Yadav', 'Rohit Sharma'], bowler: 'J Hazlewood', script: [4, 1, 6, 0, 'W', 1] },
+    { batsmen: ['Rohit Sharma', 'I Kishan'], bowler: 'M Siraj', script: [6, 2, 1, 4, 1, 0] },
+    { batsmen: ['S Yadav', 'I Kishan'], bowler: 'G Maxwell', script: [1, 6, 4, 2, 1, 4] },
+  ], 60),
+  // India 2nd innings — Test (sample overs 28–29)
+  'seed-live-2': chainBbb(3, [
+    { batsmen: ['R Sharma', 'Y Jaiswal'], bowler: 'J Anderson', script: [0, 4, 1, 0, 2, 1] },
+    { batsmen: ['Y Jaiswal', 'R Sharma'], bowler: 'B Stokes', script: [1, 0, 4, 0, 0, 'W'] },
+  ], 27 * 6),
 }
 
 export const SEED_SQUADS: Record<string, { team: string; players: { player: { id: string; name: string }; role?: string }[] }[]> = {
@@ -383,6 +492,26 @@ export const SEED_SQUADS: Record<string, { team: string; players: { player: { id
         { player: { id: 'p6', name: 'S Yadav' }, role: 'Batsman' },
         { player: { id: 'b1', name: 'J Bumrah' }, role: 'Bowler' },
         { player: { id: 'b2', name: 'T Boult' }, role: 'Bowler' },
+      ],
+    },
+  ],
+  'seed-live-2': [
+    {
+      team: 'India',
+      players: [
+        { player: { id: 'i1', name: 'Y Jaiswal' }, role: 'Batsman' },
+        { player: { id: 'i2', name: 'R Sharma' }, role: 'Batsman' },
+        { player: { id: 'i3', name: 'V Kohli' }, role: 'Batsman' },
+        { player: { id: 'i5', name: 'J Bumrah' }, role: 'Bowler' },
+      ],
+    },
+    {
+      team: 'England',
+      players: [
+        { player: { id: 'e4', name: 'Z Crawley' }, role: 'Batsman' },
+        { player: { id: 'e5', name: 'J Root' }, role: 'Batsman' },
+        { player: { id: 'e1', name: 'J Anderson' }, role: 'Bowler' },
+        { player: { id: 'e2', name: 'B Stokes' }, role: 'All-rounder' },
       ],
     },
   ],

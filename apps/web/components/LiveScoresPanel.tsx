@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { Match } from '@/lib/api'
+import type { MatchOddsBoard } from '@/lib/odds'
 import { getPublicApiUrl } from '@/lib/apiUrl'
 import { staleNotice } from '@/lib/cacheTime'
 import { loadHomeCache, mergeMatchList, saveHomeCache } from '@/lib/matchCache'
+import { isLiveMatch } from '@/lib/matchState'
 import { usePolling } from '@/lib/usePolling'
 import { TeamBadge } from './TeamBadge'
 
@@ -35,21 +37,14 @@ async function fetchMatches(path: string): Promise<{ data: Match[]; stale: boole
 }
 
 
-function fmtScore(s?: { r: number; w: number; o: number }) {
-  return s ? `${s.r}/${s.w} (${s.o})` : '—'
+function shortOf(match: Match, i: number) {
+  return match.teamInfo?.[i]?.shortname
+    ?? match.teams[i]?.split(' ').map((w) => w[0]).join('').slice(0, 3).toUpperCase()
+    ?? '?'
 }
 
-function matchContext(match: Match): string | null {
-  const live = match.matchStarted && !match.matchEnded
-  if (!live || !match.score?.length) return null
-  const fmt = (match.matchType ?? '').toUpperCase()
-  const last = match.score[match.score.length - 1]
-  const chasing = match.status.match(/need (\d+)/i)
-  if (chasing) return `${fmt} · Need ${chasing[1]} more`
-  return fmt ? `${fmt} · ${last.r}/${last.w} (${last.o} ov)` : null
-}
-
-function WebMatchCard({ match }: { match: Match }) {
+/** Slim chalk card — shortnames + score + one status line. */
+function WebMatchCard({ match, odds }: { match: Match; odds?: MatchOddsBoard | null }) {
   const live = match.matchStarted && !match.matchEnded
   const fmt = (match.matchType ?? 'match').toUpperCase()
   const scores = match.score ?? []
@@ -57,48 +52,58 @@ function WebMatchCard({ match }: { match: Match }) {
   const t1 = match.teams[1]?.toLowerCase().split(' ')[0] ?? ''
   const s0 = scores.find((s) => s.inning.toLowerCase().includes(t0))
   const s1 = scores.find((s) => s.inning.toLowerCase().includes(t1))
-  const ctx = matchContext(match)
   const series = match.name.split(',').pop()?.trim()
+  const state = live ? 'LIVE' : match.matchEnded ? 'RESULT' : 'UP'
 
   return (
     <Link href={`/match/${match.id}`} className={`w-match ${live ? 'w-match-live' : ''}`}>
       <div className="w-match-head">
-        <div className="w-match-head-left">
-          {live && <span className="w-live-dot" aria-hidden />}
-          <span className="w-match-fmt">{fmt}</span>
-          {ctx && <span className="w-match-ctx">{ctx}</span>}
-        </div>
+        <span className="w-match-fmt">
+          {live ? <span className="w-live-dot" aria-hidden /> : null}
+          {fmt}
+          {series ? ` · ${series}` : ''}
+        </span>
         <span className={`w-match-badge ${live ? 'w-badge-live' : match.matchEnded ? 'w-badge-result' : 'w-badge-up'}`}>
-          {live ? 'LIVE' : match.matchEnded ? 'RESULT' : 'UPCOMING'}
+          {state}
         </span>
       </div>
 
       <div className="w-match-body">
         <div className="w-side">
-          <TeamBadge shortname={match.teamInfo?.[0]?.shortname} name={match.teams[0]} img={match.teamInfo?.[0]?.img} />
+          <TeamBadge shortname={shortOf(match, 0)} name={match.teams[0]} img={match.teamInfo?.[0]?.img} size={28} />
           <div className="w-side-text">
-            <span className="w-short">{match.teamInfo?.[0]?.shortname ?? match.teams[0]}</span>
-            <span className="w-score">{fmtScore(s0)}</span>
+            <span className="w-short">{shortOf(match, 0)}</span>
+            <span className="w-score">
+              {s0 ? <>{s0.r}/{s0.w}<small> ({s0.o})</small></> : '—'}
+            </span>
           </div>
         </div>
-
-        <span className="w-vs">vs</span>
-
+        <span className="w-vs">v</span>
         <div className="w-side w-side-r">
           <div className="w-side-text w-side-text-r">
-            <span className="w-short">{match.teamInfo?.[1]?.shortname ?? match.teams[1]}</span>
-            <span className="w-score">{fmtScore(s1)}</span>
+            <span className="w-short">{shortOf(match, 1)}</span>
+            <span className="w-score">
+              {s1 ? <>{s1.r}/{s1.w}<small> ({s1.o})</small></> : '—'}
+            </span>
           </div>
-          <TeamBadge shortname={match.teamInfo?.[1]?.shortname} name={match.teams[1]} img={match.teamInfo?.[1]?.img} />
+          <TeamBadge shortname={shortOf(match, 1)} name={match.teams[1]} img={match.teamInfo?.[1]?.img} size={28} />
         </div>
       </div>
 
-      <p className={`w-status ${live ? 'w-status-live' : ''}`}>{match.status}</p>
+      {live && odds?.matchOdds?.length ? (
+        <div className="w-odds">
+          {odds.matchOdds.slice(0, 2).map((o) => (
+            <span key={o.team} className={`w-odds-chip ${o.dir === 'up' ? 'up' : o.dir === 'down' ? 'down' : ''}`}>
+              <em>{o.shortname || o.team.slice(0, 3)}</em>
+              <strong>{o.back < 40 ? o.back.toFixed(2) : Math.round(o.back)}</strong>
+            </span>
+          ))}
+        </div>
+      ) : null}
 
-      <div className="w-meta">
-        <span>{series ?? fmt}</span>
-        <span>{match.venue}</span>
-      </div>
+      <p className={`w-status ${live ? 'w-status-live' : ''}`} title={match.status}>
+        {match.status}
+      </p>
     </Link>
   )
 }
@@ -126,7 +131,7 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
   recentRef.current = recent
   upcomingRef.current = upcoming
   const [stale, setStale] = useState(initial?.stale ?? !!boot.diskAt)
-  const [streaming, setStreaming] = useState(false)
+  const [oddsById, setOddsById] = useState<Record<string, MatchOddsBoard>>({})
   const [cachedLabel, setCachedLabel] = useState<string | null>(
     (initial?.stale || boot.diskAt) && (initial?.cachedAt ?? boot.diskAt)
       ? staleNotice(initial?.cachedAt ?? boot.diskAt)
@@ -134,10 +139,11 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
   )
 
   const load = useCallback(async () => {
-    const [l, r, u] = await Promise.all([
+    const [l, r, u, oRes] = await Promise.all([
       fetchMatches('/matches/live'),
       fetchMatches('/matches/recent'),
       fetchMatches('/matches/upcoming'),
+      fetch(`${API}/odds/live`, { cache: 'no-store' }).then((res) => res.json()).catch(() => null),
     ])
     const disk = loadHomeCache()
     const nextLive = mergeMatchList(l.data, liveRef.current.length ? liveRef.current : (disk?.live ?? []))
@@ -146,6 +152,11 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
     setLive(nextLive)
     setRecent(nextRecent)
     setUpcoming(nextUpcoming)
+    if (oRes?.success && Array.isArray(oRes.data)) {
+      const map: Record<string, MatchOddsBoard> = {}
+      for (const board of oRes.data as MatchOddsBoard[]) map[board.matchId] = board
+      setOddsById(map)
+    }
     if (nextLive.length || nextRecent.length || nextUpcoming.length) {
       saveHomeCache(nextLive, nextRecent, nextUpcoming)
     }
@@ -171,22 +182,32 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
     if (typeof window === 'undefined' || !('EventSource' in window)) return
     let es: EventSource | null = null
 
-    const onMsg = (e: Event) => {
+    const onScores = (e: Event) => {
       try {
         const body = JSON.parse((e as MessageEvent).data) as { data?: Match[] }
         if (Array.isArray(body.data) && body.data.length) {
           setLive((prev) => mergeMatchList(body.data!, prev))
-          setStreaming(true)
         }
       } catch { /* ignore malformed frame */ }
+    }
+    const onOdds = (e: Event) => {
+      try {
+        const body = JSON.parse((e as MessageEvent).data) as { data?: MatchOddsBoard[] }
+        if (!Array.isArray(body.data)) return
+        setOddsById((prev) => {
+          const next = { ...prev }
+          for (const board of body.data!) next[board.matchId] = board
+          return next
+        })
+      } catch { /* ignore */ }
     }
     const connect = () => {
       if (es || document.visibilityState !== 'visible') return
       es = new EventSource(`${API}/stream`)
-      es.addEventListener('scores', onMsg)
-      es.onerror = () => setStreaming(false)
+      es.addEventListener('scores', onScores)
+      es.addEventListener('odds', onOdds)
     }
-    const disconnect = () => { es?.close(); es = null; setStreaming(false) }
+    const disconnect = () => { es?.close(); es = null }
     const onVisibility = () => { document.visibilityState === 'visible' ? connect() : disconnect() }
 
     connect()
@@ -197,22 +218,14 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
     }
   }, [])
 
-  const list = tab === 'live' ? live : tab === 'recent' ? recent : upcoming
+  const liveOnly = live.filter(isLiveMatch)
+  const list = tab === 'live' ? liveOnly : tab === 'recent' ? recent : upcoming
   const label = tab === 'live' ? 'live' : tab === 'recent' ? 'recent' : 'upcoming'
-  const liveCount = live.filter((m) => m.matchStarted && !m.matchEnded).length
-  const totalMatches = live.length + recent.length + upcoming.length
+  const totalMatches = liveOnly.length + recent.length + upcoming.length
   const feedEmpty = totalMatches === 0
 
   return (
     <div className="live-panel" id="fixtures">
-      {liveCount > 0 && tab === 'live' && (
-        <div className="live-bar">
-          <span className="live-dot" />
-          <span>{liveCount} match{liveCount === 1 ? '' : 'es'} live now</span>
-          {streaming && <span className="live-stream">● Streaming</span>}
-        </div>
-      )}
-
       {stale && list.length > 0 && cachedLabel && (
         <div className="alert-banner alert-stale">{cachedLabel}</div>
       )}
@@ -227,7 +240,7 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
             className={`tab-btn ${tab === t ? 'tab-btn-on' : ''}`}
             onClick={() => setTab(t)}
           >
-            {t === 'live' ? `Live (${live.length})` : t === 'recent' ? `Results (${recent.length})` : `Fixtures (${upcoming.length})`}
+            {t === 'live' ? `Live (${liveOnly.length})` : t === 'recent' ? `Results (${recent.length})` : `Fixtures (${upcoming.length})`}
           </button>
         ))}
       </div>
@@ -249,8 +262,12 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
           )}
         </div>
       ) : (
-        <div className="match-list">
-          {list.map((m) => <WebMatchCard key={m.id} match={m} />)}
+        <div className="match-rail" role="list">
+          {list.map((m) => (
+            <div key={m.id} className="match-rail-item" role="listitem">
+              <WebMatchCard match={m} odds={oddsById[m.id]} />
+            </div>
+          ))}
         </div>
       )}
     </div>

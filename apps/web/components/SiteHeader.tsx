@@ -1,10 +1,8 @@
 import Link from 'next/link'
-import { AppDownloadButton } from './AppDownloadButton'
 import { AuthButton } from './AuthButton'
-import { TopMatchesBar } from './TopMatchesBar'
 
 const NAV = [
-  { href: '/', label: 'Live' },
+  { href: '/', label: 'Home' },
   { href: '/matches', label: 'Matches' },
   { href: '/series', label: 'Series' },
   { href: '/fixtures', label: 'Fixtures' },
@@ -13,17 +11,17 @@ const NAV = [
   { href: '/teams', label: 'Teams' },
 ]
 
+/** Brand + nav only — live scores live in the Home list (ticker gets cluttered). */
 export function SiteHeader() {
   return (
-    <div className="site-top">
-      <header className="site-header">
+    <header className="site-header site-top">
       <div className="container header-inner">
         <div className="brand">
           <Link href="/" className="brand-link">
-            <span className="brand-mark" aria-hidden>LG</span>
+            <span className="brand-mark" aria-hidden>CP</span>
             <div>
-              <p className="brand-title">LiveLine Guru</p>
-              <p className="brand-tagline">Live scores &amp; live line</p>
+              <p className="brand-title">Cricket Pulse</p>
+              <p className="brand-tagline">Live Line &amp; AI</p>
             </div>
           </Link>
         </div>
@@ -34,11 +32,8 @@ export function SiteHeader() {
           <input type="search" name="q" placeholder="Search teams, series…" aria-label="Search" minLength={2} />
           <button type="submit" aria-label="Search">⌕</button>
         </form>
-        <AppDownloadButton className="app-cta" label="Get App" comingSoonLabel="Get App" />
         <AuthButton />
       </div>
-      </header>
-      <TopMatchesBar />
-    </div>
+    </header>
   )
 }

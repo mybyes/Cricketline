@@ -6,15 +6,21 @@ import { getLiveMatches } from '@/lib/api'
 export const revalidate = 15
 
 export const metadata: Metadata = {
-  title: 'Live Cricket Scores — Ball by Ball | LiveLine Guru',
-  description: 'Live cricket scores and ball-by-ball updates for all ongoing matches — IPL, Tests, ODIs and T20.',
+  title: 'Live Cricket Scores & Markets',
+  description: 'Live cricket scores and display-only match odds for all ongoing matches — IPL, Tests, ODIs and T20.',
   alternates: { canonical: '/live' },
+  openGraph: {
+    title: 'Live Cricket Scores & Markets | Cricket Pulse',
+    description: 'All ongoing matches with live line updates and display-only markets.',
+    url: '/live',
+    type: 'website',
+  },
 }
 
 export default async function LivePage() {
   const { data } = await getLiveMatches()
   return (
-    <PortalLayout title="Live Scores" subtitle={`${data.length} match${data.length === 1 ? '' : 'es'} live now`} refresh>
+    <PortalLayout title="Live Scores" subtitle="Ongoing matches" refresh>
       <MatchGrid matches={data} empty="No live matches right now" />
     </PortalLayout>
   )

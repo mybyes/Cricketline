@@ -8,33 +8,47 @@ import type { FastifyReply } from 'fastify'
  * deploy, a score update handled by instance A must reach clients connected to instance B.
  * Every instance subscribes to the same channel, so a publish on any instance fans out to ALL
  * clients across ALL instances. That's the scaling lesson.
+ *
+ * Channels:
+ *   rt:scores → event: scores  (live Match[])
+ *   rt:odds   → event: odds    (display-only MatchOddsBoard[])
  */
-const CHANNEL = 'rt:scores'
+const SCORES_CHANNEL = 'rt:scores'
+const ODDS_CHANNEL = 'rt:odds'
 
 let publisher: Redis | null = null
 let subscriber: Redis | null = null
 const clients = new Set<FastifyReply>()
 
+function writeEvent(reply: FastifyReply, event: string, message: string) {
+  try {
+    reply.raw.write(`event: ${event}\ndata: ${message}\n\n`)
+  } catch {
+    clients.delete(reply)
+  }
+}
+
 export function initRealtime(redis: Redis) {
   publisher = redis
   // A connection in subscriber mode can't run normal commands — use a dedicated duplicate.
   subscriber = redis.duplicate()
-  subscriber.subscribe(CHANNEL).catch(() => {})
-  subscriber.on('message', (_channel, message) => {
-    // Fan out the event to every locally-connected SSE client.
+  subscriber.subscribe(SCORES_CHANNEL, ODDS_CHANNEL).catch(() => {})
+  subscriber.on('message', (channel, message) => {
+    const event = channel === ODDS_CHANNEL ? 'odds' : 'scores'
     for (const reply of clients) {
-      try {
-        reply.raw.write(`event: scores\ndata: ${message}\n\n`)
-      } catch {
-        clients.delete(reply)
-      }
+      writeEvent(reply, event, message)
     }
   })
 }
 
 /** Publish a score event to the bus — fans out to clients on every instance. */
 export function publishScores(payload: unknown) {
-  publisher?.publish(CHANNEL, JSON.stringify(payload)).catch(() => {})
+  publisher?.publish(SCORES_CHANNEL, JSON.stringify(payload)).catch(() => {})
+}
+
+/** Publish display-only odds boards — fans out as `event: odds`. */
+export function publishOdds(payload: unknown) {
+  publisher?.publish(ODDS_CHANNEL, JSON.stringify(payload)).catch(() => {})
 }
 
 export function addClient(reply: FastifyReply) { clients.add(reply) }

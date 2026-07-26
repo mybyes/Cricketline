@@ -5,6 +5,7 @@ import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import { Redis } from 'ioredis'
+import { isMemoryRedisUrl, MemoryRedis } from './lib/memoryRedis'
 import { initDb } from './db'
 import authRoute from './routes/auth'
 import matchesRoute from './routes/matches'
@@ -19,9 +20,12 @@ import dailyRoute from './routes/daily'
 import portalRoute from './routes/portal'
 import searchRoute from './routes/search'
 import streamRoute from './routes/stream'
-import { clientCount, initRealtime, publishScores } from './services/realtime'
+import oddsRoute from './routes/odds'
+import { clientCount, initRealtime, publishOdds, publishScores } from './services/realtime'
 import { getLiveMatches } from './services/cricapi'
 import { cached, CACHE_KEYS, LIVE_MATCHES_TTL } from './services/cache'
+import { getLiveOddsBoards, oddsFeedConfigured } from './services/odds'
+import { cricketSeriesCoverage, theOddsConfigured } from './services/theOddsApi'
 import { initStoreRedis, rebuildMatchFanIndex } from './services/store'
 import { initCommentsRedis } from './services/comments'
 import { initPollRedis } from './services/poll'
@@ -59,7 +63,12 @@ app.setErrorHandler((err: FastifyError, req, reply) => {
   })
 })
 
-const redis = new Redis(redisUrl, { maxRetriesPerRequest: 3 })
+const redis = (isMemoryRedisUrl(redisUrl)
+  ? new MemoryRedis()
+  : new Redis(redisUrl, { maxRetriesPerRequest: 3 })) as unknown as Redis
+if (isMemoryRedisUrl(redisUrl)) {
+  console.warn('⚠ Using in-memory Redis (memory://) — fine for local seed/demo; not for production.')
+}
 app.decorate('redis', redis)
 initStoreRedis(redis)
 initCommentsRedis(redis)
@@ -105,9 +114,17 @@ async function start() {
   app.register(portalRoute)
   app.register(searchRoute)
   app.register(streamRoute)
+  app.register(oddsRoute)
 
   warmCaches(redis, app.log).catch(() => {})
-  startWicketWatcher(redis, app.log)
+  // Push / wicket alerts off by default (lightweight info app). Set PUSH_ENABLED=1 to turn on.
+  const pushOn = /^(1|true|yes)$/i.test(process.env.PUSH_ENABLED ?? '')
+  if (pushOn) {
+    startWicketWatcher(redis, app.log)
+    app.log.info('Wicket push alerts enabled (PUSH_ENABLED=1)')
+  } else {
+    app.log.info('Wicket push alerts disabled (set PUSH_ENABLED=1 to enable)')
+  }
 
   // Publisher tick — the near-zero-cost hot loop. Three guards keep it off the API quota
   // and the Upstash command budget:
@@ -116,18 +133,37 @@ async function start() {
   //      hit at most once per TTL no matter the tick rate — not once per 8s.
   //   3. Publish only when the snapshot actually changed (skip redundant PUBLISH + fan-out).
   let lastLiveSig = ''
+  let lastOddsSig = ''
   async function liveTick() {
     if (clientCount() === 0) return
-    const live = await cached(redis, CACHE_KEYS.liveMatches(), LIVE_MATCHES_TTL, () => getLiveMatches(redis))
+    // `cached` returns { data, stale, cachedAt } — publish the Match[] payload only.
+    const { data: live } = await cached(redis, CACHE_KEYS.liveMatches(), LIVE_MATCHES_TTL, () => getLiveMatches(redis))
     const sig = JSON.stringify(live)
-    if (sig === lastLiveSig) return
-    lastLiveSig = sig
-    publishScores({ data: live, ts: Date.now() })
+    if (sig !== lastLiveSig) {
+      lastLiveSig = sig
+      publishScores({ data: live, ts: Date.now() })
+    }
+
+    // Display-only markets: publish whenever boards change (seed simulator jitters each tick).
+    const boards = await getLiveOddsBoards(
+      live.map((m) => m.id),
+      live.map((m) => ({ id: m.id, teams: m.teams ?? [] })),
+    )
+    if (!boards.length) return
+    const oddsSig = JSON.stringify(boards.map((b) => ({
+      id: b.matchId,
+      at: b.updatedAt,
+      m: b.matchOdds.map((o) => o.back),
+      s: b.sessions.map((x) => [x.line, x.yes, x.no]),
+    })))
+    if (oddsSig === lastOddsSig) return
+    lastOddsSig = oddsSig
+    publishOdds({ data: boards, ts: Date.now(), displayOnly: true })
   }
   setInterval(() => { liveTick().catch(() => { /* skip tick */ }) }, 8_000)
 
   app.get('/', async () => ({
-    service: 'LiveLine Guru API',
+    service: 'Cricket Pulse API',
     status: 'ok',
     docs: {
       health: '/health',
@@ -135,6 +171,9 @@ async function start() {
       recent: '/matches/recent',
       upcoming: '/matches/upcoming',
       score: '/match/:id/score',
+      odds: '/match/:id/odds',
+      oddsLive: '/odds/live',
+      stream: '/stream',
       series: '/series',
     },
   }))
@@ -148,6 +187,11 @@ async function start() {
       db: dbReady ? 'postgres' : 'redis',
       redis: redisOk ? 'up' : 'down',
       mode: SEED_MODE ? 'seed' : 'live',
+      odds: oddsFeedConfigured()
+        ? (theOddsConfigured() ? 'the-odds-api' : 'feed')
+        : (SEED_MODE ? 'seed' : 'unset'),
+      cricketSeries: theOddsConfigured() ? cricketSeriesCoverage() : undefined,
+      push: pushOn ? 'on' : 'off',
     })
   })
 

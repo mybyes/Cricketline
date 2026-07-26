@@ -4,29 +4,33 @@ import { fetchMatchSquad } from '../../lib/api'
 import type { SquadPlayer, SquadTeam } from '../../types/extras'
 import { colors } from '../../theme/colors'
 
-function roleShort(role?: string): string {
+function roleLabel(role?: string): string {
   const r = (role ?? '').toLowerCase()
-  if (r.includes('wicket')) return 'WK'
-  if (r.includes('all')) return 'AR'
-  if (r.includes('bowl')) return 'BOWL'
-  if (r.includes('bat')) return 'BAT'
-  return role?.slice(0, 4).toUpperCase() ?? '—'
+  if (r.includes('wicket')) return 'Batter (WK)'
+  if (r.includes('all')) return 'All Rounder'
+  if (r.includes('bowl')) return 'Bowler'
+  if (r.includes('bat')) return 'Batter'
+  return role || 'Player'
 }
 
-function roleColor(short: string): string {
-  if (short === 'WK') return '#6a1b9a'
-  if (short === 'AR') return '#1565c0'
-  if (short === 'BOWL') return '#e65100'
-  if (short === 'BAT') return colors.score
-  return colors.textDim
+function shortTeam(name: string) {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return name.slice(0, 4).toUpperCase()
+  return parts.map((p) => p[0]).join('').slice(0, 4).toUpperCase()
+}
+
+function initials(name: string) {
+  return name.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase()
 }
 
 function splitXi(players: SquadPlayer[]) {
-  const xi = players.filter((p) => !p.substitute)
-  const subs = players.filter((p) => p.substitute)
-  return { xi, subs }
+  return {
+    xi: players.filter((p) => !p.substitute),
+    bench: players.filter((p) => p.substitute),
+  }
 }
 
+/** Side-by-side Playing XI / Bench — Cricket Guru style, no remote photos. */
 export function SquadPanel({ matchId }: { matchId: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,62 +51,110 @@ export function SquadPanel({ matchId }: { matchId: string }) {
   if (error) return <Text style={styles.error}>{error}</Text>
   if (!teams.length) return <Text style={styles.empty}>Squad not announced yet</Text>
 
+  const a = teams[0]
+  const b = teams[1]
+  const aSplit = splitXi(a?.players ?? [])
+  const bSplit = splitXi(b?.players ?? [])
+  const xiRows = Math.max(aSplit.xi.length, bSplit.xi.length)
+  const benchRows = Math.max(aSplit.bench.length, bSplit.bench.length)
+
   return (
     <View>
-      {teams.map((t, i) => {
-        const { xi, subs } = splitXi(t.players ?? [])
-        return (
-          <View key={i} style={styles.teamBlock}>
-            <Text style={styles.teamName}>{t.team}</Text>
-            <Text style={styles.xiLabel}>PLAYING XI ({xi.length})</Text>
-            {xi.map((p, j) => (
-              <PlayerRow key={j} order={j + 1} player={p} />
-            ))}
-            {subs.length > 0 && (
-              <>
-                <Text style={styles.subLabel}>SUBSTITUTES</Text>
-                {subs.map((p, j) => (
-                  <PlayerRow key={`s${j}`} player={p} dimmed />
-                ))}
-              </>
-            )}
-          </View>
-        )
-      })}
+      <View style={styles.vsRow}>
+        <Text style={styles.vsTeam}>{shortTeam(a?.team ?? 'T1')}</Text>
+        <Text style={styles.vsBolt}>vs</Text>
+        <Text style={styles.vsTeam}>{shortTeam(b?.team ?? 'T2')}</Text>
+      </View>
+
+      <Section title="PLAYING XI" rows={xiRows} left={aSplit.xi} right={bSplit.xi} />
+      {benchRows > 0 && (
+        <Section title="BENCH PLAYERS" rows={benchRows} left={aSplit.bench} right={bSplit.bench} />
+      )}
     </View>
   )
 }
 
-function PlayerRow({ player, order, dimmed }: { player: SquadPlayer; order?: number; dimmed?: boolean }) {
+function Section({
+  title, rows, left, right,
+}: {
+  title: string
+  rows: number
+  left: SquadPlayer[]
+  right: SquadPlayer[]
+}) {
+  return (
+    <View style={styles.block}>
+      <View style={styles.sectionHead}>
+        <Text style={styles.sectionHeadText}>{title}</Text>
+      </View>
+      {Array.from({ length: rows }).map((_, i) => (
+        <View key={i} style={styles.compareRow}>
+          <PlayerCell player={left[i]} align="left" />
+          <View style={styles.vLine} />
+          <PlayerCell player={right[i]} align="right" />
+        </View>
+      ))}
+    </View>
+  )
+}
+
+function PlayerCell({
+  player, align,
+}: {
+  player?: SquadPlayer
+  align: 'left' | 'right'
+}) {
+  if (!player) {
+    return <View style={styles.cell} />
+  }
   const name = player.player?.name ?? '—'
-  const short = roleShort(player.role)
-  const bg = roleColor(short)
+  const role = roleLabel(player.role)
+  const mirror = align === 'right'
 
   return (
-    <View style={[styles.playerRow, dimmed && styles.playerDim]}>
-      <View style={styles.playerLeft}>
-        {order != null && <Text style={styles.order}>{order}</Text>}
-        <Text style={styles.player}>{name}</Text>
+    <View style={[styles.cell, mirror && styles.cellRight]}>
+      {!mirror && <View style={styles.avatar}><Text style={styles.avatarText}>{initials(name)}</Text></View>}
+      <View style={[styles.meta, mirror && styles.metaRight]}>
+        <Text style={styles.name} numberOfLines={1}>{name}</Text>
+        <Text style={styles.role} numberOfLines={1}>{role}</Text>
       </View>
-      <View style={[styles.rolePill, { backgroundColor: bg }]}>
-        <Text style={styles.roleText}>{short}</Text>
-      </View>
+      {mirror && <View style={styles.avatar}><Text style={styles.avatarText}>{initials(name)}</Text></View>}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  teamBlock: { backgroundColor: colors.card, borderRadius: 6, marginBottom: 10, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  teamName: { fontSize: 12, fontWeight: '800', color: '#fff', backgroundColor: colors.header, padding: 10 },
-  xiLabel: { fontSize: 9, fontWeight: '800', color: colors.textDim, letterSpacing: 0.6, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
-  subLabel: { fontSize: 9, fontWeight: '800', color: colors.textDim, letterSpacing: 0.6, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4, borderTopWidth: 1, borderTopColor: colors.border },
-  playerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
-  playerDim: { opacity: 0.75 },
-  playerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  order: { width: 20, fontSize: 11, fontWeight: '800', color: colors.textDim },
-  player: { fontSize: 14, fontWeight: '600', color: colors.text, flex: 1 },
-  rolePill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, minWidth: 40, alignItems: 'center' },
-  roleText: { fontSize: 10, fontWeight: '800', color: '#fff' },
+  vsRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.card, borderRadius: 8, padding: 14, marginBottom: 10,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  vsTeam: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text, textAlign: 'center' },
+  vsBolt: { fontSize: 14, color: colors.textDim, marginHorizontal: 8 },
+  block: {
+    backgroundColor: colors.card, borderRadius: 8, marginBottom: 10,
+    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+  },
+  sectionHead: {
+    backgroundColor: colors.header, alignSelf: 'center', marginTop: 10, marginBottom: 4,
+    paddingHorizontal: 16, paddingVertical: 6, borderRadius: 6,
+  },
+  sectionHeadText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.6 },
+  compareRow: {
+    flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
+  },
+  vLine: { width: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  cell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 10 },
+  cellRight: { flexDirection: 'row' },
+  avatar: {
+    width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceAlt,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarText: { fontSize: 10, fontWeight: '800', color: colors.textMuted },
+  meta: { flex: 1, minWidth: 0 },
+  metaRight: { alignItems: 'flex-end' },
+  name: { fontSize: 12, fontWeight: '700', color: colors.text },
+  role: { fontSize: 10, color: colors.textDim, marginTop: 1 },
   empty: { color: colors.textDim, textAlign: 'center', marginTop: 32 },
   error: { color: colors.live, textAlign: 'center', marginTop: 24 },
 })

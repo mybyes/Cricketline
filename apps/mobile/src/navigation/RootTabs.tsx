@@ -3,10 +3,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { StyleSheet, View } from 'react-native'
 import { HomeScreen } from '../screens/HomeScreen'
-import { UpcomingScreen } from '../screens/UpcomingScreen'
+import { MatchesScreen } from '../screens/MatchesScreen'
+import { SeriesScreen } from '../screens/SeriesScreen'
 import { FavoritesScreen } from '../screens/FavoritesScreen'
 import { SettingsScreen } from '../screens/SettingsScreen'
 import { ScoreboardScreen } from '../screens/ScoreboardScreen'
+import { SeriesTableScreen } from '../screens/SeriesTableScreen'
 import type { RootStackParamList, RootTabParamList } from '../types/match'
 import { colors } from '../theme/colors'
 
@@ -14,10 +16,10 @@ const Tab = createBottomTabNavigator<RootTabParamList>()
 const Stack = createNativeStackNavigator<RootStackParamList>()
 
 const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  Live: 'flash',
-  Upcoming: 'calendar',
-  Favorites: 'star',
-  Settings: 'settings-outline',
+  Home: 'home',
+  Matches: 'calendar-outline',
+  Series: 'trophy-outline',
+  More: 'ellipsis-horizontal',
 }
 
 function TabIcon({ route, focused }: { route: string; focused: boolean }) {
@@ -33,8 +35,20 @@ function TabIcon({ route, focused }: { route: string; focused: boolean }) {
 function MatchStack({ listScreen: ListScreen }: { listScreen: React.ComponentType }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: colors.bg } }}>
-      <Stack.Screen name="Home" component={ListScreen as any} />
+      <Stack.Screen name="List" component={ListScreen as any} />
       <Stack.Screen name="Scoreboard" component={ScoreboardScreen} />
+      <Stack.Screen name="SeriesTable" component={SeriesTableScreen} />
+    </Stack.Navigator>
+  )
+}
+
+function MoreStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: colors.bg } }}>
+      <Stack.Screen name="MoreHome" component={SettingsScreen} />
+      <Stack.Screen name="Favorites" component={FavoritesScreen} />
+      <Stack.Screen name="Scoreboard" component={ScoreboardScreen} />
+      <Stack.Screen name="SeriesTable" component={SeriesTableScreen} />
     </Stack.Navigator>
   )
 }
@@ -51,17 +65,25 @@ export function RootTabs() {
         tabBarIcon: ({ focused }) => <TabIcon route={route.name} focused={focused} />,
       })}
     >
-      <Tab.Screen name="Live" options={{ title: 'Live' }}>{() => <MatchStack listScreen={HomeScreen} />}</Tab.Screen>
-      <Tab.Screen name="Upcoming" options={{ title: 'Fixtures' }}>{() => <MatchStack listScreen={UpcomingScreen} />}</Tab.Screen>
-      <Tab.Screen name="Favorites" options={{ title: 'Saved' }}>{() => <MatchStack listScreen={FavoritesScreen} />}</Tab.Screen>
-      <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: 'More' }} />
+      <Tab.Screen name="Home" options={{ title: 'Home' }}>{() => <MatchStack listScreen={HomeScreen} />}</Tab.Screen>
+      <Tab.Screen name="Matches" options={{ title: 'Matches' }}>{() => <MatchStack listScreen={MatchesScreen} />}</Tab.Screen>
+      <Tab.Screen name="Series" options={{ title: 'Series' }}>{() => <MatchStack listScreen={SeriesScreen} />}</Tab.Screen>
+      <Tab.Screen name="More" component={MoreStack} options={{ title: 'More' }} />
     </Tab.Navigator>
   )
 }
 
 const styles = StyleSheet.create({
-  tabBar: { backgroundColor: colors.card, borderTopColor: colors.border, borderTopWidth: 1, height: 58, paddingBottom: 6 },
+  tabBar: {
+    backgroundColor: colors.card,
+    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    height: 56,
+    paddingBottom: 6,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
   tabItem: { alignItems: 'center', paddingTop: 4 },
   tabLabel: { fontSize: 10, fontWeight: '600' },
-  indicator: { position: 'absolute', top: 0, width: 28, height: 3, backgroundColor: colors.header, borderRadius: 2 },
+  indicator: { position: 'absolute', top: 0, width: 22, height: 2, backgroundColor: colors.accent, borderRadius: 1 },
 })

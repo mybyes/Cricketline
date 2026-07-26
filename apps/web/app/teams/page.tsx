@@ -6,7 +6,7 @@ import { getTeams, type TeamCategory, type TeamSummary } from '@/lib/api'
 export const revalidate = 600
 
 export const metadata: Metadata = {
-  title: 'Cricket Teams — International, Leagues & Domestic | LiveLine Guru',
+  title: 'Cricket Teams — International, Leagues & Domestic',
   description: 'Browse cricket teams by category — international sides, T20 league franchises and domestic teams — with live scores, fixtures and results.',
   alternates: { canonical: '/teams' },
 }

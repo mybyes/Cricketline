@@ -3,6 +3,7 @@ import type { Redis } from 'ioredis'
 import { cached, CACHE_KEYS, ALL_MATCHES_TTL, setCacheBypass } from './cache'
 import { SEED_MATCHES, SEED_SCORECARDS, SEED_BBB, SEED_SQUADS } from '../data/seed'
 import { CRICBUZZ_ENABLED, fetchCricbuzzMatches } from './cricbuzzSource'
+import { isLiveMatch, sortLiveMatches } from '../lib/matchState'
 
 const BASE = 'https://api.cricapi.com/v1'
 
@@ -140,13 +141,14 @@ async function tryCurrentMatches(): Promise<Match[] | null> {
 
 export async function getLiveMatches(redis: Redis) {
   if (SEED_MODE) {
-    return SEED_MATCHES.filter((m) => m.matchStarted && !m.matchEnded)
+    return sortLiveMatches(SEED_MATCHES.filter(isLiveMatch))
   }
   if (useCurrentMatches !== false) {
     const current = await tryCurrentMatches()
     if (current && Array.isArray(current)) {
       useCurrentMatches = true
-      return current
+      // CricAPI currentMatches = "today's slate" — includes finished games. Filter hard.
+      return sortLiveMatches(current.filter(isLiveMatch))
     }
     // Only downgrade permanently when the endpoint genuinely isn't on this key
     // (i.e. some key still had quota but the call failed). If everything is just
@@ -155,7 +157,7 @@ export async function getLiveMatches(redis: Redis) {
   }
 
   const all = await getAllMatchesCached(redis)
-  return all.filter((m) => m.matchStarted && !m.matchEnded)
+  return sortLiveMatches(all.filter(isLiveMatch))
 }
 
 export async function getUpcomingMatches(redis: Redis) {
@@ -178,7 +180,7 @@ export async function getRecentMatches(redis: Redis, limit = 15) {
  * preferred over this; seed never gets written back into the cache.
  */
 export function seedMatchList(kind: 'live' | 'recent' | 'upcoming'): Match[] {
-  if (kind === 'live') return SEED_MATCHES.filter((m) => m.matchStarted && !m.matchEnded)
+  if (kind === 'live') return sortLiveMatches(SEED_MATCHES.filter(isLiveMatch))
   if (kind === 'upcoming') return SEED_MATCHES.filter((m) => !m.matchStarted && !m.matchEnded)
   return SEED_MATCHES.filter((m) => m.matchEnded)
     .sort((a, b) => new Date(b.dateTimeGMT).getTime() - new Date(a.dateTimeGMT).getTime())
@@ -189,6 +191,12 @@ export function seedSeriesList(limit = 12) {
   return [
     { id: 'seed-series', name: 'Indian Premier League 2026', startDate: '2026-05-01', endDate: '2026-06-30', odi: 0, t20: 1, test: 0 },
     { id: 'seed-series-2', name: 'England tour of India 2026', startDate: '2026-06-10', endDate: '2026-07-05', odi: 0, t20: 0, test: 1 },
+    { id: 'seed-series-hundred', name: "The Hundred Men's Competition 2026", startDate: '2026-07-21', endDate: '2026-08-16', odi: 0, t20: 1, test: 0 },
+    { id: 'seed-series-t20i', name: 'International T20 2026', startDate: '2026-01-01', endDate: '2026-12-31', odi: 0, t20: 1, test: 0 },
+    { id: 'seed-series-test', name: 'ICC World Test Championship 2025-27', startDate: '2025-06-01', endDate: '2027-06-30', odi: 0, t20: 0, test: 1 },
+    { id: 'seed-series-odi', name: 'One Day Internationals 2026', startDate: '2026-01-01', endDate: '2026-12-31', odi: 1, t20: 0, test: 0 },
+    { id: 'seed-series-bbl', name: 'Big Bash League 2025-26', startDate: '2025-12-01', endDate: '2026-02-01', odi: 0, t20: 1, test: 0 },
+    { id: 'seed-series-psl', name: 'Pakistan Super League 2026', startDate: '2026-02-01', endDate: '2026-03-31', odi: 0, t20: 1, test: 0 },
   ].slice(0, limit)
 }
 
@@ -284,7 +292,7 @@ export function buildMatchHistory(matchId: string, all: Match[]) {
   return { headToHead, team1Recent, team2Recent, teams: match.teams }
 }
 
-export async function getSeriesList(limit = 12) {
+export async function getSeriesList(limit = 40) {
   if (SEED_MODE) return seedSeriesList(limit)
   const data = await cricGet<{ id: string; name: string; startDate: string; endDate: string; odi: number; t20: number; test: number }[]>(
     'series',

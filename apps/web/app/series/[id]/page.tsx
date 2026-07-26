@@ -9,10 +9,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const { data } = await getSeriesTableFull(id)
   const name = data?.seriesName ?? 'Series'
+  const title = `${name} — Standings, Fixtures & Results`
+  const description = `${name} points table, fixtures, results and live scores on Cricket Pulse.`
   return {
-    title: `${name} — Standings, Fixtures & Results | LiveLine Guru`,
-    description: `${name} points table, fixtures and results.`,
+    title,
+    description,
     alternates: { canonical: `/series/${id}` },
+    openGraph: { title, description, url: `/series/${id}`, type: 'website' },
+    twitter: { card: 'summary', title, description },
   }
 }
 

@@ -1,4 +1,5 @@
 import { getApiUrl } from './apiUrl'
+import type { MatchOddsBoard } from './odds'
 
 const API = getApiUrl()
 
@@ -21,6 +22,8 @@ export interface Match {
 export interface SeriesItem {
   id: string
   name: string
+  startDate?: string
+  endDate?: string
 }
 
 export interface StandingRow {
@@ -214,6 +217,51 @@ export function getBallByBall(id: string) {
   return get<BbbBall[]>(`/match/${id}/bbb`, 12)
 }
 
+/** All live display-only boards (home multi-match strip). */
+export async function getLiveOdds(): Promise<ApiResult<MatchOddsBoard[]>> {
+  try {
+    const res = await fetch(`${API}/odds/live`, { next: { revalidate: 5 } })
+    const body = await res.json().catch(() => ({})) as {
+      success?: boolean
+      data?: MatchOddsBoard[]
+      error?: string
+    }
+    if (body.success && Array.isArray(body.data)) {
+      return { data: body.data, stale: false }
+    }
+    return { data: [], stale: false, error: body.error }
+  } catch (e: unknown) {
+    return { data: [], stale: false, error: e instanceof Error ? e.message : 'Network error' }
+  }
+}
+
+/** Display-only market board (info app — no wagering). */
+export async function getMatchOdds(id: string): Promise<ApiResult<MatchOddsBoard | null>> {
+  try {
+    const res = await fetch(`${API}/match/${id}/odds`, { next: { revalidate: 5 } })
+    const body = await res.json().catch(() => ({})) as {
+      success?: boolean
+      data?: MatchOddsBoard
+      error?: string
+      stale?: boolean
+      cachedAt?: number
+    }
+    if (body.success && body.data && Array.isArray(body.data.matchOdds)) {
+      return {
+        data: body.data,
+        stale: !!body.stale,
+        cachedAt: typeof body.cachedAt === 'number' ? body.cachedAt : undefined,
+      }
+    }
+    return { data: null, stale: false, error: body.error ?? `API ${res.status}` }
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Network error'
+    return { data: null, stale: false, error: msg }
+  }
+}
+
+export type { MatchOddsBoard } from './odds'
+
 export function getSeriesList() {
   return get<SeriesItem[]>('/series', 300)
 }
@@ -223,9 +271,33 @@ export function getSeriesTable(id: string) {
 }
 
 export const FALLBACK_SERIES: SeriesItem[] = [
-  { id: 'ipl', name: 'Indian Premier League 2026' },
-  { id: 't20blast', name: 'Vitality T20 Blast 2026' },
-  { id: 'test', name: 'International Tests' },
-  { id: 'odi', name: 'ICC Cricket World Cup League Two' },
-  { id: 'wt20', name: "Women's T20 World Cup 2026" },
+  { id: 'ipl', name: 'Indian Premier League 2026', startDate: '2026-03-01', endDate: '2026-06-30' },
+  { id: 't20blast', name: 'Vitality T20 Blast 2026', startDate: '2026-05-20', endDate: '2026-07-15' },
+  { id: 'hundred', name: "The Hundred Men's 2026", startDate: '2026-07-21', endDate: '2026-08-16' },
+  { id: 'test', name: 'International Tests', startDate: '2025-06-01', endDate: '2027-06-30' },
+  { id: 'odi', name: 'ICC Cricket World Cup League Two', startDate: '2026-01-01', endDate: '2026-12-31' },
+  { id: 'bbl', name: 'Big Bash League 2025-26', startDate: '2025-12-01', endDate: '2026-02-01' },
+  { id: 'psl', name: 'Pakistan Super League 2026', startDate: '2026-02-01', endDate: '2026-03-31' },
+  { id: 'wt20', name: "Women's T20 World Cup 2026", startDate: '2026-09-01', endDate: '2026-10-20' },
 ]
+
+/** Split series into ongoing/upcoming vs recently concluded (by endDate). */
+export function splitSeriesByTiming(list: SeriesItem[], now = Date.now()) {
+  const day = 86_400_000
+  const upcoming: SeriesItem[] = []
+  const concluded: SeriesItem[] = []
+  for (const s of list) {
+    const end = s.endDate ? Date.parse(s.endDate) : NaN
+    const start = s.startDate ? Date.parse(s.startDate) : NaN
+    if (Number.isFinite(end) && end < now - day) {
+      concluded.push(s)
+    } else if (Number.isFinite(start) || Number.isFinite(end)) {
+      upcoming.push(s)
+    } else {
+      upcoming.push(s)
+    }
+  }
+  upcoming.sort((a, b) => (Date.parse(a.startDate ?? '') || 0) - (Date.parse(b.startDate ?? '') || 0))
+  concluded.sort((a, b) => (Date.parse(b.endDate ?? '') || 0) - (Date.parse(a.endDate ?? '') || 0))
+  return { upcoming, concluded }
+}

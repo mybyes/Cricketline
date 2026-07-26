@@ -1,4 +1,5 @@
 import type { Match } from './cricapi'
+import { isLiveMatch, sortLiveMatches } from '../lib/matchState'
 
 export interface Offer {
   id: string
@@ -22,13 +23,14 @@ export const OFFERS: Offer[] = [
   { id: 'stream', title: '1 Month Free', brand: 'Streaming Partner', perk: 'Watch live cricket', code: 'WATCHCF', category: 'streaming', ctaUrl: null, placeholder: true },
 ]
 
-/** Pick the day's marquee match: a live one if available, else the soonest upcoming. */
+/**
+ * Match of the Day (UI label — not “season”):
+ * 1) Best truly-live match by livePriority (ICC/IPL/India… then progress)
+ * 2) Else soonest upcoming
+ */
 export function pickMatchOfTheDay(matches: Match[]): Match | null {
-  const live = matches.filter((m) => m.matchStarted && !m.matchEnded)
-  if (live.length) {
-    // Prefer the live match furthest along (more to talk about) — most innings/score entries.
-    return [...live].sort((a, b) => (b.score?.length ?? 0) - (a.score?.length ?? 0))[0]
-  }
+  const live = sortLiveMatches(matches.filter(isLiveMatch))
+  if (live.length) return live[0]
   const upcoming = matches
     .filter((m) => !m.matchStarted && !m.matchEnded)
     .sort((a, b) => new Date(a.dateTimeGMT).getTime() - new Date(b.dateTimeGMT).getTime())

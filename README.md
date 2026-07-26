@@ -1,4 +1,4 @@
-# LiveLine Guru (Cricketline)
+# Cricket Pulse (Cricketline)
 
 **Live cricket scores, ball-by-ball, scorecards & fixtures** — fast, free, and fully usable
 without an account. A monorepo with one backend feeding a web portal and an Android/iOS app.
@@ -73,9 +73,22 @@ live CricAPI  →  fresh Redis cache  →  7-day real backup  →  pre-filled se
 
 ## Real-time (live line)
 
-`GET /stream` is a **Server-Sent Events** endpoint. The backend pushes a `scores` event when the
-live snapshot changes; both clients subscribe (web via `EventSource`, mobile via
-`react-native-sse`) and apply updates instantly, falling back to polling if the stream drops.
+`GET /stream` is a **Server-Sent Events** endpoint. The backend pushes:
+- `scores` — when the live match list changes
+- `odds` — display-only market boards (match odds + session/fancy) when rates move
+
+Both clients subscribe (web via `EventSource`, mobile via `react-native-sse`) and apply updates
+instantly, falling back to polling if the stream drops.
+
+### Display-only odds (info app)
+
+This product **shows** market rates; it does **not** accept bets, wallets, or stakes.
+
+- **Demo (default):** seed matches get a simulated live line (jitters while SSE clients are connected).
+- **Live feed:** set `ODDS_API_URL` (optional `ODDS_API_KEY`) to a licensed redistribution API that
+  returns our `MatchOddsBoard` JSON (`GET {ODDS_API_URL}/match/{id}/odds`, or a URL template with `{id}`).
+
+UI: web Live tab + Markets sub-tab; mobile Live Line + Session & Rates.
 
 ---
 
@@ -125,6 +138,7 @@ EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=…    # optional — enables sign-in (see AUTH
 | `GET /stream` | **SSE** live-score push |
 | `GET /matches/live` · `/recent` · `/upcoming` | Match lists |
 | `GET /match/:id/score` · `/squad` · `/bbb` · `/history` | Scorecard · XI · ball-by-ball · H2H |
+| `GET /match/:id/odds` · `/odds/live` | **Display-only** match odds + session markets (info app) |
 | `GET /series` · `/series/:id/table` | Series list · points table |
 | `GET /favorites?device_id=` · `POST/DELETE /favorites` | Saved matches (anonymous) |
 | `POST /devices/register` | Push-token registration (per-device, per-account when signed in) |
@@ -135,15 +149,15 @@ EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=…    # optional — enables sign-in (see AUTH
 
 ## App surfaces
 
-- **Web:** server-rendered live scores, results, fixtures, series, T20 rankings, team pages,
-  per-match page (live summary + win-probability + prediction poll + session/rate analytics +
-  ball-by-ball commentary + scorecard + squads). Team-brand-coloured identity throughout.
-- **Mobile (live line):** Home (Featured / Live / Series), and a match screen with tabs —
-  **Live Line · Session & Rates · Scorecard · Squad · Info** — plus win-probability and narrated
-  ball-by-ball. Favourites ★, settings, optional account.
+- **Web match tabs:** **Live Line · Markets · Scorecard · Squad · Info**
+  (compact match odds on Live Line; full Back/Lay + Session Line/Yes/No on Markets).
+- **Mobile match tabs:** same — **Live Line · Markets · Scorecard · Squad · Info**.
+  Home live cards show a lightweight odds strip when boards exist.
+- **No commentary tab** (last-6 ball chips stay on Live Line). **Push alerts off** by default
+  (`PUSH_ENABLED` unset/0).
 
-> Win-probability and session/rate panels are **model estimates / analytics only** — not odds
-> or betting features.
+> Win-probability is a **model estimate**. Live **match odds / session markets** are
+> **display-only** informational rates (never wagering).
 
 ---
 

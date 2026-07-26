@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View,
 } from 'react-native'
@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics'
 import PagerView from 'react-native-pager-view'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { fetchLiveMatches, fetchMatchBbb, fetchMatchScore } from '../lib/api'
+import { synthRatesBoard } from '../lib/matchRates'
 import { fallOfWickets } from '../lib/partnerships'
 import { LiveBadge } from '../components/LiveBadge'
 import { StaleBanner } from '../components/StaleBanner'
@@ -17,10 +18,11 @@ import { LiveLinePanel } from '../components/LiveLinePanel'
 import { LivePulse } from '../components/LivePulse'
 import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
 import { TeamAvatar } from '../components/TeamAvatar'
-import { useScoreStream } from '../lib/scoreStream'
-import { RatesPanel } from '../components/panels/RatesPanel'
-import { SessionPanel } from '../components/panels/SessionPanel'
+import { useLiveStream } from '../lib/liveStream'
+import { AdSlot } from '../components/AdSlot'
+import { MatchHistoryPanel } from '../components/panels/MatchHistoryPanel'
 import { SquadPanel } from '../components/panels/SquadPanel'
+import { TablePanel } from '../components/panels/TablePanel'
 import type { BbbBall } from '../types/extras'
 import type { Match, RootStackParamList } from '../types/match'
 import type { InningScorecard, ScorecardData } from '../types/scorecard'
@@ -28,21 +30,29 @@ import { colors } from '../theme/colors'
 import { formatScore, formatSr } from '../theme/matchUtils'
 
 type Route = RouteProp<RootStackParamList, 'Scoreboard'>
-type Tab = 'line' | 'session' | 'scorecard' | 'squad' | 'info'
+type Tab = 'line' | 'history' | 'scorecard' | 'squad' | 'points' | 'info'
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'line', label: 'Live Line' },
-  { key: 'session', label: 'Session & Rates' },
-  { key: 'scorecard', label: 'Scorecard' },
-  { key: 'squad', label: 'Squad' },
-  { key: 'info', label: 'Info' },
-]
+function tabsForMatch(live: boolean): { key: Tab; label: string }[] {
+  const base: { key: Tab; label: string }[] = [
+    { key: 'line', label: live ? 'Live' : 'Summary' },
+    { key: 'scorecard', label: 'Scorecard' },
+  ]
+  // History only while the match is live
+  if (live) base.push({ key: 'history', label: 'History' })
+  base.push(
+    { key: 'squad', label: 'Squads' },
+    { key: 'points', label: 'Points' },
+    { key: 'info', label: 'Info' },
+  )
+  return base
+}
 
 const TAB_FADE_STEPS = [0.04, 0.12, 0.28, 0.5, 0.78, 0.95]
 
 function TabBar({
-  active, onChange, scrollRef, onTabLayout,
+  tabs, active, onChange, scrollRef, onTabLayout,
 }: {
+  tabs: { key: Tab; label: string }[]
   active: Tab
   onChange: (k: Tab) => void
   scrollRef: React.RefObject<ScrollView | null>
@@ -57,7 +67,7 @@ function TabBar({
         style={styles.tabBar}
         contentContainerStyle={styles.tabBarContent}
       >
-        {TABS.map((t, i) => (
+        {tabs.map((t, i) => (
           <Pressable
             key={t.key}
             onPress={() => onChange(t.key)}
@@ -267,9 +277,8 @@ export function ScoreboardScreen() {
   loadRef.current = load
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Real-time push: when the live stream reports this match, apply its score/status
-  // instantly and debounce-refetch ball-by-ball + scorecard (which the stream omits).
-  const streaming = useScoreStream(matchId, (m) => {
+  // One SSE for scores + display-only odds; debounce-refetch scorecard/BBB (stream omits detail).
+  const { connected: streaming, odds: oddsBoard } = useLiveStream(matchId, (m) => {
     setData((prev) => prev
       ? { ...prev, score: m.score ?? prev.score, status: m.status ?? prev.status, matchStarted: m.matchStarted, matchEnded: m.matchEnded }
       : prev)
@@ -294,8 +303,11 @@ export function ScoreboardScreen() {
     tabScrollRef.current.scrollTo({ x: Math.max(0, layout.x - 24), animated: true })
   }, [])
 
+  const isLive = !!(data?.matchStarted && !data?.matchEnded)
+  const tabs = useMemo(() => tabsForMatch(isLive), [isLive])
+
   const onTabChange = (k: Tab) => {
-    const idx = TABS.findIndex((t) => t.key === k)
+    const idx = tabs.findIndex((t) => t.key === k)
     if (idx < 0) return
     setTab(k)
     pagerRef.current?.setPage(idx)
@@ -304,7 +316,7 @@ export function ScoreboardScreen() {
   }
 
   const onPageSelected = (index: number) => {
-    setTab(TABS[index]?.key ?? 'line')
+    setTab(tabs[index]?.key ?? 'line')
     scrollTabIntoView(index)
     if (lastHapticPage.current !== index) {
       lastHapticPage.current = index
@@ -317,14 +329,22 @@ export function ScoreboardScreen() {
   }, [])
 
   useEffect(() => {
-    const idx = TABS.findIndex((t) => t.key === tab)
+    const idx = tabs.findIndex((t) => t.key === tab)
     if (idx >= 0) scrollTabIntoView(idx)
-  }, [tab, scrollTabIntoView])
+  }, [tab, tabs, scrollTabIntoView])
+
+  // Drop History when match is no longer live
+  useEffect(() => {
+    if (!isLive && tab === 'history') {
+      setTab('line')
+      pagerRef.current?.setPage(0)
+    }
+  }, [isLive, tab])
 
   const shareScore = async () => {
     if (!data) return
     const line = data.score?.map((s) => `${s.inning}: ${s.r}/${s.w}`).join(' · ') ?? data.status
-    await Share.share({ message: `🏏 ${data.teams.join(' vs ')}\n${line}\n${data.status}\n· LiveLine Guru` })
+    await Share.share({ message: `${data.teams.join(' vs ')}\n${line}\n${data.status}\n· Cricket Pulse` })
   }
 
   const switchMatch = (m: Match) => {
@@ -342,9 +362,56 @@ export function ScoreboardScreen() {
   const renderPage = (key: Tab) => {
     if (!data) return null
     switch (key) {
-      case 'line': return <LiveLinePanel data={data} bbb={bbb} otherLive={otherLive} onSwitchMatch={switchMatch} />
-      case 'session': return <><SessionPanel data={data} bbb={bbb} /><RatesPanel data={data} /></>
-      case 'squad': return <SquadPanel matchId={matchId} />
+      case 'line': return (
+        <View>
+          <LiveLinePanel
+            data={data}
+            bbb={bbb}
+            otherLive={otherLive}
+            onSwitchMatch={switchMatch}
+            odds={oddsBoard}
+          />
+          <AdSlot size="inline" />
+        </View>
+      )
+      case 'history': {
+        const innName = data.scorecard?.[data.scorecard.length - 1]?.inning?.replace(/ inning.*$/i, '') ?? ''
+        const battingLabel =
+          data.teamInfo?.find((t) => innName.toLowerCase().includes((t.name ?? '').toLowerCase().split(' ')[0] ?? '___'))?.shortname
+          ?? data.teamInfo?.[0]?.shortname
+          ?? (innName.split(' ').map((w) => w[0]).join('').slice(0, 4).toUpperCase() || 'Score')
+        const sc = data.score?.[data.score.length - 1]
+        const balls = bbb.length || (sc ? Math.floor(sc.o) * 6 + Math.round((sc.o % 1) * 10) : 0)
+        const scoreLine = sc ? `${sc.r}-${sc.w} (${balls} b)` : undefined
+        const histOdds = oddsBoard ?? (data.matchStarted && !data.matchEnded ? synthRatesBoard(data, bbb) : null)
+        return (
+          <View>
+            <MatchHistoryPanel
+              bbb={bbb}
+              odds={histOdds}
+              battingLabel={battingLabel}
+              scoreLine={scoreLine}
+              matchType={data.matchType ?? matchType}
+            />
+            <AdSlot size="inline" />
+          </View>
+        )
+      }
+      case 'squad': return (
+        <View>
+          <SquadPanel matchId={matchId} />
+          <AdSlot size="inline" />
+        </View>
+      )
+      case 'points': return seriesId ? (
+        <View>
+          <Text style={styles.sectionLabel}>POINTS TABLE</Text>
+          <TablePanel seriesId={seriesId} />
+          <AdSlot size="inline" />
+        </View>
+      ) : (
+        <Text style={styles.noData}>Points table not available for this match</Text>
+      )
       case 'info': return (
         <View style={styles.infoCard}>
           <InfoRow label="Venue" value={data.venue} />
@@ -410,17 +477,18 @@ export function ScoreboardScreen() {
       ) : data ? (
         <View style={styles.content}>
           <ScoreHero data={data} />
-          <TabBar active={tab} onChange={onTabChange} scrollRef={tabScrollRef} onTabLayout={onTabLayout} />
+          <TabBar tabs={tabs} active={tab} onChange={onTabChange} scrollRef={tabScrollRef} onTabLayout={onTabLayout} />
           <PagerView
+            key={tabs.map((t) => t.key).join('-')}
             ref={pagerRef}
             style={styles.pager}
-            initialPage={0}
+            initialPage={Math.max(0, tabs.findIndex((t) => t.key === tab))}
             scrollEnabled
             overdrag
-            offscreenPageLimit={2}
+            offscreenPageLimit={1}
             onPageSelected={(e) => onPageSelected(e.nativeEvent.position)}
           >
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <View key={t.key} style={styles.page} collapsable={false}>
                 <ScrollView
                   style={styles.pageScroll}
@@ -440,6 +508,7 @@ export function ScoreboardScreen() {
               </View>
             ))}
           </PagerView>
+          <AdSlot size="banner" />
         </View>
       ) : null}
     </View>

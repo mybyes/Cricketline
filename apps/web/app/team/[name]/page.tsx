@@ -11,10 +11,15 @@ const involves = (m: Match, team: string) =>
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }): Promise<Metadata> {
   const { name } = await params
   const team = decodeURIComponent(name)
+  const title = `${team} — Live Scores, Fixtures & Results`
+  const description = `Follow ${team}: live scores, display-only markets, upcoming fixtures, recent results and rankings on Cricket Pulse.`
+  const url = `/team/${encodeURIComponent(team)}`
   return {
-    title: `${team} — Live Scores, Fixtures, Results & Ranking | LiveLine Guru`,
-    description: `Follow ${team}: live scores, upcoming fixtures, recent results and ICC ranking.`,
-    alternates: { canonical: `/team/${encodeURIComponent(team)}` },
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: 'website' },
+    twitter: { card: 'summary', title, description },
   }
 }
 

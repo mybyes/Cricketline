@@ -22,11 +22,10 @@ export function MatchTabs({ tabs }: { tabs: MatchTab[] }) {
           </button>
         ))}
       </div>
-      {tabs.map((t) => (
-        <div key={t.key} className="mtab-panel" role="tabpanel" hidden={active !== t.key}>
-          {t.content}
-        </div>
-      ))}
+      {/* Mount only the active panel — avoids duplicate SSE/pollers (odds, etc.). */}
+      <div className="mtab-panel" role="tabpanel">
+        {tabs.find((t) => t.key === active)?.content}
+      </div>
     </div>
   )
 }

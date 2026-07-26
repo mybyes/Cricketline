@@ -1,15 +1,15 @@
 import type { MetadataRoute } from 'next'
 
-/** PWA manifest — installable web app (a positive mobile/SEO signal). */
+/** Site manifest for icons / theme — product app is Android (Play Store). */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'LiveLine Guru — Live Cricket Line',
-    short_name: 'LiveLine Guru',
-    description: 'Fast live cricket line: ball-by-ball scores, session & rates, scorecards and fixtures. Free, no login.',
+    name: 'Cricket Pulse – Live Line & AI',
+    short_name: 'Cricket Pulse',
+    description: 'Live Line & AI — scores, display-only markets, scorecards and fixtures.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0a3f27',
-    theme_color: '#0a3f27',
+    background_color: '#F2EFE6',
+    theme_color: '#163528',
     categories: ['sports', 'news'],
     icons: [
       { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },

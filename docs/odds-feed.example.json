@@ -1,0 +1,32 @@
+{
+  "matchId": "example-match-id",
+  "source": "feed",
+  "displayOnly": true,
+  "disclaimer": "Display-only market rates for information. Not a betting service — no wagers accepted.",
+  "suspended": false,
+  "updatedAt": 1710000000000,
+  "matchOdds": [
+    { "team": "Mumbai Indians", "shortname": "MI", "back": 1.72, "lay": 1.75, "dir": "up" },
+    { "team": "Royal Challengers Bengaluru", "shortname": "RCB", "back": 2.14, "lay": 2.18, "dir": "down" }
+  ],
+  "sessions": [
+    {
+      "id": "s1",
+      "name": "MI 6 Over Runs",
+      "line": 52,
+      "yes": 90,
+      "no": 110,
+      "status": "open",
+      "dir": "up"
+    },
+    {
+      "id": "s2",
+      "name": "MI 20 Over Runs",
+      "line": 202,
+      "yes": 100,
+      "no": 100,
+      "status": "open",
+      "dir": "same"
+    }
+  ]
+}

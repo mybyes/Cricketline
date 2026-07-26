@@ -1,14 +1,9 @@
-export function formatCachedAt(ts?: number): string | null {
-  if (!ts) return null
-  const sec = Math.max(0, Math.floor((Date.now() - ts) / 1000))
-  if (sec < 60) return 'Updated just now'
-  const mins = Math.floor(sec / 60)
-  if (mins < 60) return `Last updated ${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `Last updated ${hrs}h ago`
-  return `Last updated ${Math.floor(hrs / 24)}d ago`
+/** Kept for optional debug; never surface age-of-cache to users (misleading vs live feed). */
+export function formatCachedAt(_ts?: number): string | null {
+  return null
 }
 
-export function staleNotice(cachedAt?: number): string {
-  return formatCachedAt(cachedAt) ?? 'Showing saved scores'
+/** Stale banners disabled — live stream / polling is the source of truth. */
+export function staleNotice(_cachedAt?: number): string | null {
+  return null
 }

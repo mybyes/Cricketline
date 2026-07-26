@@ -1,8 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#1b5e20"/>
-  <rect x="0" y="480" width="1200" height="150" fill="#0d3d1a"/>
-  <text x="80" y="200" fill="#ffffff" font-family="system-ui,sans-serif" font-size="72" font-weight="800">CricketFast</text>
-  <text x="80" y="290" fill="#c8e6c9" font-family="system-ui,sans-serif" font-size="42" font-weight="600">Live Cricket Scores &amp; Live Line</text>
-  <text x="80" y="380" fill="#a5d6a7" font-family="system-ui,sans-serif" font-size="28">IPL ∑ Tests ∑ ODIs ∑ T20  Free</text>
-  <text x="80" y="560" fill="#ffffff" font-size="120"><œ</text>
+  <rect width="1200" height="630" fill="#0E241C"/>
+  <rect x="0" y="0" width="1200" height="6" fill="#F0A202"/>
+  <rect x="0" y="520" width="1200" height="110" fill="#0A1C16"/>
+  <rect x="80" y="96" width="88" height="88" rx="20" fill="#163528" stroke="#F0A202" stroke-width="3"/>
+  <text x="124" y="156" fill="#F0A202" font-family="Georgia, serif" font-size="44" font-weight="700" text-anchor="middle">CP</text>
+  <text x="80" y="250" fill="#F7F4EC" font-family="Georgia, serif" font-size="68" font-weight="700">Cricket Pulse</text>
+  <text x="80" y="312" fill="#F0A202" font-family="system-ui,sans-serif" font-size="32" font-weight="600" letter-spacing="3">LIVE LINE &amp; AI</text>
+  <text x="80" y="372" fill="#C4BDAA" font-family="system-ui,sans-serif" font-size="24">IPL ù Tests ù ODIs ù T20 ù Display-only ù Free</text>
+  <text x="80" y="590" fill="#F0A202" font-family="Georgia, serif" font-size="40" font-weight="700">Free ù No login ù Display-only</text>
 </svg>

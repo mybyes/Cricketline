@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import { AdSlot } from './AdSlot'
 import { Breadcrumbs, type Crumb } from './Breadcrumbs'
 import { PageRefresher } from './PageRefresher'
-import { SiteFooter } from './SiteFooter'
 import { SiteHeader } from './SiteHeader'
 
 const EXPLORE = [
@@ -46,7 +45,6 @@ export function PortalLayout({
           <AdSlot id="sidebar" format="sidebar" />
         </aside>
       </div>
-      <SiteFooter />
     </>
   )
 }

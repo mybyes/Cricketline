@@ -1,30 +1,35 @@
-# LiveLine Guru — Project Log & Context Handoff
+# Cricket Pulse — Project Log & Context Handoff
 
 > **Purpose:** a durable, in-repo record of *what this project is, what was decided, and why* —
 > so any future session (or a fresh laptop / new Claude conversation) can pick up without
 > re-deriving the context. Local memory files don't travel between machines; this does.
-> Last updated: 2026-06-28.
+> Last updated: 2026-07-26.
 
 ---
 
 ## TL;DR — current state
-- **Product:** **LiveLine Guru** — a fast, free cricket **live-line** app (live scores,
-  ball-by-ball, session/rate analytics, scorecards, fixtures). Web + Android, one shared backend.
+- **Product:** **Cricket Pulse – Live Line & AI** — a fast, free cricket **live-line** info app
+ (live scores, display-only match odds & session markets, scorecards, fixtures). Android-first;
+ web is a thin SEO/support surface.
+- **Push / commentary:** off by default (lightweight). Match tabs: Live · History · Scorecard · Squads · Points · Info.
 - **Stack:** pnpm monorepo — `apps/backend` (Fastify), `apps/web` (Next.js 15), `apps/mobile` (Expo RN).
 - **Repo:** `git@github.com:mybyes/Cricketline.git`, branch `master` (auto-deploys: backend→Railway, web→Vercel).
 - **Data:** runs in **demo/seed mode** with zero config; flip to live by setting a CricAPI key.
-- **Brand:** renamed **CricketFast → LiveLine Guru** (see "Brand" below — this matters).
-- **Maturity:** code is solid (21 unit tests, load-tested). NOT yet: published app, real users,
-  real-Google-auth round-trip, telemetry. Those are deliberately deferred.
+- **Brand:** **Cricket Pulse** (mark `CP`; package `com.cricketpulse.app`; scheme `cricketpulse`).
+ Visual system: **night chalkboard** (ink `#0B1220`, chalk field, amber ticks, Fraunces + IBM Plex).
+ Avoid competitor names (Cricline, Cricket Guru, CricketFast) in store copy.
+- **Maturity:** code is solid (unit tests, load-tested). NOT yet: published app, real users,
+ real-Google-auth round-trip, telemetry. Those are deliberately deferred.
 
 ---
 
 ## ⚠️ Non-negotiable decisions & constraints (read before changing anything)
 
-1. **NO betting features. Ever.** The user repeatedly asked for odds / bhav / session betting /
-   "rate as trading parameter." These are illegal in India and Play-Store-banned. We build
-   **analytics equivalents only** (session phase stats, a *model-estimate* win-probability that
-   is explicitly "not odds", CRR/RRR rate charts). Hold this line.
+1. **NO bookmaker / wagering. Ever.** The app may show **display-only** match odds + session
+ markets (CricLine-style info app) from a licensed feed or demo seed — but never place bets,
+ wallets, stakes, or “bet now” CTAs. Analytics (phase stats, model win-probability, CRR/RRR)
+ stay separate from market boards. Client target may be outside India; still keep the product
+ as an **info app**, not a bookie.
 
 2. **Near-zero running cost is the goal.** Target = CricLine functional parity at ~₹0/mo. Don't
    add paid infra/services casually. Cost guards are in place (see Architecture).
@@ -81,14 +86,15 @@ site's AdSense `ca-pub-2294186064217785` is not the user's).
 
 ## What's built
 - **Web:** live scores, results, fixtures, series + points tables, ICC rankings, team pages,
-  per-match page (live summary + win-prob + prediction poll + session/rate analytics +
-  ball-by-ball commentary + scorecard + squads). Team-brand-coloured identity. SEO: metadata,
-  sitemap, robots, JSON-LD (WebSite/SearchAction, SoftwareApplication, Organization, FAQ,
-  SportsEvent), PWA manifest.
+ per-match page (live summary + win-prob + **display-only markets** + prediction poll +
+ session/rate analytics + ball-by-ball commentary + scorecard + squads). Team-brand-coloured
+ identity. SEO: metadata, sitemap, robots, JSON-LD, PWA manifest.
 - **Mobile (Expo):** Home (Featured/Live/Series), match screen tabs — Live Line · Session &
-  Rates · Scorecard · Squad · Info — win-prob, narrated ball-by-ball, favourites, optional auth.
+ Rates · Scorecard · Squad · Info — win-prob, **live markets**, narrated ball-by-ball,
+ favourites, optional auth.
 - **Backend:** all of the above + comments/poll, favorites, push (Expo), multi-key CricAPI
-  rotation, RapidAPI-Cricbuzz fallback adapter.
+ rotation, RapidAPI-Cricbuzz fallback adapter, **display-only odds** (`/match/:id/odds`,
+ `/odds/live`, SSE `odds` event; seed simulator or `ODDS_API_URL` feed).
 - **Tests:** 21 unit tests (`pnpm test`) — fallback chain, single-flight, auth verify,
   points-table, win-prob math. Node's built-in runner via tsx (no test framework).
 
@@ -112,11 +118,14 @@ site's AdSense `ca-pub-2294186064217785` is not the user's).
 
 ## Open items / next steps
 1. **Register `livelineguru.in`/`.com`**, point at Vercel, set `NEXT_PUBLIC_SITE_URL` +
-   `ALLOWED_ORIGINS`. (Code already defaults to `livelineguru.in`.)
+ `ALLOWED_ORIGINS`. (Code already defaults to `livelineguru.in`.)
 2. **Go live with data:** set `CRICAPI_KEYS` on Railway, remove `SEED_DATA`. See `DEPLOY.md`.
-3. **Publish the app:** `eas build`/`eas submit` (Play Console, $25). See `apps/mobile/README.md`.
-4. Deferred until real users: analytics/error-tracking, real-Google auth round-trip, load at scale.
-5. Optional internal cleanup: rename leftover `cricketfast` dev tokens (low value, harmless).
+3. **Wire licensed odds feed** for the outside-India client: set `ODDS_API_URL` (+ key) on
+   Railway once the redistribution contract is signed. Until then, demo seed markets work.
+4. **Publish the app:** `eas build`/`eas submit` (Play Console / client store). See `apps/mobile/README.md`.
+5. Deferred until real users: analytics/error-tracking, real-Google auth round-trip, load at scale.
+6. Optional internal cleanup: rename leftover `cricketfast` dev tokens (low value, harmless).
+7. **Rebrand** polish (ASO leftovers, user-visible CricketFast strings) when name is finalized.
 
 ## Map of the docs
 - `README.md` — usage guide (dev, data model, env, API).

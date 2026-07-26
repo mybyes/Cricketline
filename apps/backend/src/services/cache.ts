@@ -1,5 +1,6 @@
 import { Redis } from 'ioredis'
 import type { Match } from './cricapi'
+import { isLiveMatch, sortLiveMatches } from '../lib/matchState'
 
 const LIVE_MATCHES_TTL = 15
 const SCORECARD_TTL    = 12
@@ -12,6 +13,7 @@ const HISTORY_TTL      = 300
 const SERIES_LIST_TTL  = 600
 const SERIES_TABLE_TTL = 300
 const ALL_MATCHES_TTL  = 300
+const ODDS_TTL         = 5 // display-only markets move fast; short cache
 const UPSTREAM_BACKOFF_KEY = 'meta:cricapi:backoff'
 const UPSTREAM_BACKOFF_SEC = 900 // match CricAPI 15-min cooldown
 
@@ -157,7 +159,7 @@ export async function readCache<T>(redis: Redis, key: string): Promise<{ data: T
 }
 
 export function filterLiveMatches(all: Match[]) {
-  return all.filter((m) => m.matchStarted && !m.matchEnded)
+  return sortLiveMatches(all.filter(isLiveMatch))
 }
 
 export function filterUpcomingMatches(all: Match[]) {
@@ -226,6 +228,7 @@ export const CACHE_KEYS = {
   squad:        (id: string) => `squad:${id}`,
   bbb:          (id: string) => `bbb:${id}`,
   history:      (id: string) => `history:${id}`,
+  odds:         (id: string) => `odds:${id}`,
   schedule:     () => 'matches:schedule',
   allMatches:   () => 'matches:all',
   seriesList:   () => 'series:list',
@@ -235,4 +238,5 @@ export const CACHE_KEYS = {
 export {
   LIVE_MATCHES_TTL, SCORECARD_TTL, SCHEDULE_TTL, RECENT_TTL,
   SQUAD_TTL, BBB_TTL, HISTORY_TTL, SERIES_LIST_TTL, SERIES_TABLE_TTL, ALL_MATCHES_TTL,
+  ODDS_TTL,
 }

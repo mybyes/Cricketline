@@ -1,23 +1,23 @@
 {
   "expo": {
-    "name": "LiveLine Guru",
-    "slug": "cricketfast",
+    "name": "Cricket Pulse",
+    "slug": "cricketpulse",
     "owner": "mybyess-team",
     "version": "1.0.0",
-    "description": "Live cricket line — fast ball-by-ball scores, session & rates, scorecard, squads, fixtures & points table. Free, no login.",
-    "scheme": "livelineguru",
+    "description": "Cricket Pulse – Live Line & AI. Live scores, display-only match odds & session markets, scorecard, squads & points table. Free, no login.",
+    "scheme": "cricketpulse",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.livelineguru.app"
+      "bundleIdentifier": "com.cricketpulse.app"
     },
     "android": {
-      "package": "com.livelineguru.app",
+      "package": "com.cricketpulse.app",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#0a3f27",
+        "backgroundColor": "#0B1220",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -31,11 +31,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "LiveLine Guru — Live Cricket Scores",
-      "shortName": "LiveLine Guru",
-      "description": "Live cricket scores, scorecards and upcoming matches. No login required.",
-      "themeColor": "#0a3f27",
-      "backgroundColor": "#f0f2f0",
+      "name": "Cricket Pulse – Live Line & AI",
+      "shortName": "Cricket Pulse",
+      "description": "Live cricket line & markets — odds, session, scorecard. Display-only. Free, no login.",
+      "themeColor": "#0B1220",
+      "backgroundColor": "#F2EFE6",
       "display": "standalone",
       "lang": "en",
       "bundler": "metro"
@@ -44,7 +44,7 @@
       [
         "expo-notifications",
         {
-          "color": "#0a3f27",
+          "color": "#0B1220",
           "icon": "./assets/icon.png"
         }
       ],
@@ -54,7 +54,7 @@
         {
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#0a3f27"
+          "backgroundColor": "#0B1220"
         }
       ],
       "expo-web-browser"

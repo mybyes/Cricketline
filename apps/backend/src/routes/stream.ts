@@ -2,11 +2,12 @@ import { FastifyInstance } from 'fastify'
 import { getLiveMatches } from '../services/cricapi'
 import { cached, CACHE_KEYS, LIVE_MATCHES_TTL } from '../services/cache'
 import { addClient, removeClient } from '../services/realtime'
+import { getLiveOddsBoards } from '../services/odds'
 
 /**
  * Server-Sent Events stream. One held-open HTTP connection per client; the server pushes
- * `event: scores` messages as they arrive (no polling). EventSource on the client auto-reconnects.
- * We hijack the reply so Fastify doesn't try to send its own response.
+ * `event: scores` and `event: odds` messages as they arrive (no polling). EventSource on
+ * the client auto-reconnects. We hijack the reply so Fastify doesn't try to send its own response.
  */
 export default async function streamRoute(app: FastifyInstance) {
   app.get('/stream', (req, reply) => {
@@ -20,11 +21,18 @@ export default async function streamRoute(app: FastifyInstance) {
     })
     reply.raw.write('retry: 5000\n\n') // tell EventSource to retry after 5s if dropped
 
-    // Send an immediate snapshot so a fresh subscriber isn't blank until the next tick.
-    // Read through the cache (shared key) so EventSource reconnect storms can't burn the
-    // CricAPI quota — upstream is hit at most once per LIVE_MATCHES_TTL regardless of churn.
+    // Immediate snapshots so a fresh subscriber isn't blank until the next tick.
     cached(app.redis, CACHE_KEYS.liveMatches(), LIVE_MATCHES_TTL, () => getLiveMatches(app.redis))
-      .then(({ data }) => reply.raw.write(`event: scores\ndata: ${JSON.stringify({ data, ts: Date.now(), snapshot: true })}\n\n`))
+      .then(async ({ data }) => {
+        reply.raw.write(`event: scores\ndata: ${JSON.stringify({ data, ts: Date.now(), snapshot: true })}\n\n`)
+        const boards = await getLiveOddsBoards(
+          data.map((m) => m.id),
+          data.map((m) => ({ id: m.id, teams: m.teams ?? [] })),
+        )
+        if (boards.length) {
+          reply.raw.write(`event: odds\ndata: ${JSON.stringify({ data: boards, ts: Date.now(), snapshot: true })}\n\n`)
+        }
+      })
       .catch(() => {})
 
     addClient(reply)

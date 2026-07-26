@@ -1,19 +1,9 @@
 {
-  "name": "LiveLine Guru — Live Cricket Scores",
-  "short_name": "LiveLine Guru",
-  "description": "Live cricket scores, scorecards and upcoming matches. No login required.",
-  "start_url": "/",
+  "name": "Cricket Pulse – Live Line & AI",
+  "short_name": "Cricket Pulse",
+  "description": "Live cricket line & markets — odds, session, scorecard. Display-only. Free, no login.",
+  "start_url": ".",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#f0f2f0",
-  "theme_color": "#1b5e20",
-  "lang": "en",
-  "categories": ["sports", "news"],
-  "icons": [
-    {
-      "src": "/favicon.ico",
-      "sizes": "48x48",
-      "type": "image/x-icon"
-    }
-  ]
+  "background_color": "#F2EFE6",
+  "theme_color": "#0B1220"
 }

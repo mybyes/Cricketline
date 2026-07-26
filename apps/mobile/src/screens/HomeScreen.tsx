@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { AdSlot } from '../components/AdSlot'
 import { AppHeader } from '../components/AppHeader'
 import { FeedPausedCard } from '../components/FeedPausedCard'
 import { MatchCard } from '../components/MatchCard'
@@ -10,15 +11,18 @@ import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
 import { StaleBanner } from '../components/StaleBanner'
 import { useFavorites } from '../context/FavoritesContext'
 import { staleNotice } from '../lib/cacheTime'
-import { fetchLiveMatches, fetchRecentMatches, fetchUpcomingMatches } from '../lib/api'
+import { fetchLiveMatches, fetchLiveOdds, fetchRecentMatches, fetchUpcomingMatches } from '../lib/api'
+import type { MatchOddsBoard } from '../types/odds'
 import {
   hydrateHomeFromFavorites,
   loadHomeCache,
   mergeMatchList,
   saveHomeCache,
 } from '../lib/matchCache'
+import { isLiveMatch } from '../lib/matchState'
 import type { Match, RootStackParamList } from '../types/match'
 import { colors } from '../theme/colors'
+import { seriesName } from '../theme/matchUtils'
 
 type Nav = NativeStackNavigationProp<RootStackParamList>
 
@@ -35,7 +39,8 @@ export function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [stale, setStale] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
-  const [tab, setTab] = useState<'featured' | 'live' | 'series'>('featured')
+  const [tab, setTab] = useState<'featured' | 'live'>('featured')
+  const [oddsById, setOddsById] = useState<Record<string, MatchOddsBoard>>({})
   const bootstrapped = useRef(false)
   const liveRef = useRef(live)
   const recentRef = useRef(recent)
@@ -50,11 +55,18 @@ export function HomeScreen() {
     if (pull) setRefreshing(true)
     else if (!silent) setLoading(true)
 
-    const [l, r, u] = await Promise.all([
+    const [l, r, u, o] = await Promise.all([
       fetchLiveMatches(),
       fetchRecentMatches(),
       fetchUpcomingMatches(),
+      fetchLiveOdds(),
     ])
+
+    if (o.success && Array.isArray(o.data)) {
+      const map: Record<string, MatchOddsBoard> = {}
+      for (const board of o.data) map[board.matchId] = board
+      setOddsById(map)
+    }
 
     const disk = await loadHomeCache()
     const prevLive = liveRef.current.length ? liveRef.current : (disk?.live ?? [])
@@ -128,57 +140,65 @@ export function HomeScreen() {
     matchType: m.matchType,
   })
 
-  const renderSection = (title: string, data: Match[]) => (
+  const openSeriesTable = (seriesName: string, matches: Match[]) => {
+    const seriesId = matches.find((m) => m.series_id)?.series_id
+    if (!seriesId) return
+    navigation.navigate('SeriesTable', { seriesId, seriesName })
+  }
+
+  const renderRail = (title: string, data: Match[], opts?: { showDate?: boolean }) => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      {data.length > 0 ? data.map((m) => (
-        <MatchCard
-          key={m.id}
-          match={m}
-          showDate={title !== 'Live now'}
-          isFavorite={favoriteIds.has(m.id)}
-          onToggleFavorite={() => toggle(m)}
-          onPress={() => open(m)}
-        />
-      )) : (
+      {data.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          decelerationRate="fast"
+          snapToInterval={316}
+          snapToAlignment="start"
+          contentContainerStyle={styles.railContent}
+        >
+          {data.map((m) => (
+            <View key={m.id} style={styles.railCard}>
+              <MatchCard
+                match={m}
+                flush
+                showDate={opts?.showDate}
+                isFavorite={favoriteIds.has(m.id)}
+                onToggleFavorite={() => toggle(m)}
+                onPress={() => open(m)}
+                odds={oddsById[m.id] ?? null}
+                onOpenTable={m.series_id ? () => openSeriesTable(seriesName(m), [m]) : undefined}
+              />
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
         <Text style={styles.sectionEmpty}>
-          {title === 'Live now' ? 'No live matches right now' : `Nothing here yet`}
+          {title === 'Live now' ? 'No live matches right now' : 'Nothing here yet'}
         </Text>
       )}
     </View>
   )
 
-  const matchCount = live.length + recent.length + upcoming.length
+  const liveOnly = live.filter(isLiveMatch)
+  const matchCount = liveOnly.length + recent.length + upcoming.length
   const showSkeleton = loading && !refreshing && matchCount === 0
 
-  const featured = live[0] ?? upcoming[0] ?? recent[0]
-
-  // Group all matches by series (last comma segment of the match name).
-  const seriesGroups = (() => {
-    const order: string[] = []
-    const map = new Map<string, Match[]>()
-    for (const m of [...live, ...upcoming, ...recent]) {
-      const parts = m.name.split(',').map((s) => s.trim())
-      const key = parts.length >= 2 ? parts[parts.length - 1] : (m.matchType?.toUpperCase() ?? 'Other')
-      if (!map.has(key)) { map.set(key, []); order.push(key) }
-      map.get(key)!.push(m)
-    }
-    return order.map((k) => ({ series: k, matches: map.get(k)! }))
-  })()
+  const featured = liveOnly[0] ?? upcoming[0] ?? recent[0]
 
   const TABS: { key: typeof tab; label: string }[] = [
     { key: 'featured', label: 'Featured' },
     { key: 'live', label: 'Live' },
-    { key: 'series', label: 'Series' },
   ]
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <AppHeader
-        title="LiveLine Guru"
-        subtitle="Live cricket line"
+        title="Cricket Pulse"
+        subtitle="Live Line & AI"
         right={matchCount > 0 ? (
-          <View style={styles.pill}><Text style={styles.pillT}>{live.length}</Text></View>
+          <View style={styles.pill}><Text style={styles.pillT}>{liveOnly.length}</Text></View>
         ) : undefined}
       />
 
@@ -209,31 +229,28 @@ export function HomeScreen() {
 
           {tab === 'featured' && (
             <>
-              {featured && renderSection('Featured', [featured])}
-              {renderSection('Live now', live.filter((m) => m.id !== featured?.id))}
-              {renderSection('Up next', upcoming.slice(0, 4))}
+              {renderRail(
+                'Featured',
+                [featured, ...liveOnly.filter((m) => m.id !== featured?.id), ...upcoming.slice(0, 4)].filter(Boolean) as Match[],
+              )}
+              <AdSlot size="banner" />
             </>
           )}
 
           {tab === 'live' && (
             <>
-              {renderSection('Live now', live)}
-              {renderSection('Recent results', recent.slice(0, 8))}
+              {renderRail('Live now', liveOnly)}
+              <AdSlot size="banner" />
+              {renderRail('Recent results', recent.slice(0, 8), { showDate: true })}
             </>
-          )}
-
-          {tab === 'series' && (
-            seriesGroups.length > 0 ? seriesGroups.map((g) => renderSection(g.series, g.matches)) : (
-              <Text style={styles.sectionEmpty}>No series to show right now</Text>
-            )
           )}
 
           {matchCount === 0 && !loading && (
             <View style={styles.hintBox}>
               <Text style={styles.hintTitle}>Tip</Text>
-              <Text style={styles.hintBody}>Star matches to keep them on this screen. Pull down to refresh.</Text>
-              <Pressable onPress={() => navigation.getParent()?.navigate('Upcoming' as never)} style={styles.hintLink}>
-                <Text style={styles.hintLinkText}>Browse fixtures →</Text>
+              <Text style={styles.hintBody}>Star matches to save them under More. Pull down to refresh.</Text>
+              <Pressable onPress={() => navigation.getParent()?.navigate('Matches' as never)} style={styles.hintLink}>
+                <Text style={styles.hintLinkText}>Browse matches →</Text>
               </Pressable>
             </View>
           )}
@@ -256,6 +273,8 @@ const styles = StyleSheet.create({
   bannerWrap: { marginBottom: 4 },
   section: { marginTop: 8 },
   sectionTitle: { fontSize: 11, fontWeight: '800', color: colors.textDim, letterSpacing: 1, marginLeft: 16, marginBottom: 6, marginTop: 8 },
+  railContent: { paddingHorizontal: 12, paddingBottom: 4, gap: 10 },
+  railCard: { width: 300 },
   sectionEmpty: { color: colors.textDim, textAlign: 'center', marginVertical: 16, fontSize: 13, paddingHorizontal: 24 },
   hintBox: { margin: 16, padding: 16, backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
   hintTitle: { fontSize: 14, fontWeight: '800', color: colors.text, marginBottom: 8 },

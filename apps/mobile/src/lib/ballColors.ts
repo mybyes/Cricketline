@@ -15,11 +15,12 @@ export function ballColor(b: BbbBall): BallColor {
     return { bg: '#e53935', text: '#fff', label: 'W' }
   }
   if (runs === 6) return { bg: '#7b1fa2', text: '#fff', label: '6' }
-  if (runs === 4) return { bg: '#f57f17', text: '#fff', label: '4' }
-  if (runs === 0) return { bg: '#424242', text: '#fff', label: '·' }
+  if (runs === 4) return { bg: '#1E88E5', text: '#fff', label: '4' }
+  if (runs === 0) return { bg: '#ECEFF1', text: '#37474F', label: '0' }
+  if (runs >= 1 && runs <= 3) return { bg: '#43A047', text: '#fff', label: String(runs) }
 
-  const label = Number.isFinite(runs) ? String(runs) : (b.event ?? '·')
-  return { bg: '#1565c0', text: '#fff', label }
+  const label = Number.isFinite(runs) ? String(runs) : (b.event ?? '0')
+  return { bg: '#43A047', text: '#fff', label }
 }
 
 export function ballSummaryLabel(b: BbbBall): string {
