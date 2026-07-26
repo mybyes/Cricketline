@@ -229,6 +229,7 @@ export const CACHE_KEYS = {
   bbb:          (id: string) => `bbb:${id}`,
   history:      (id: string) => `history:${id}`,
   odds:         (id: string) => `odds:${id}`,
+  intelligence: (id: string) => `intel:${id}`,
   schedule:     () => 'matches:schedule',
   allMatches:   () => 'matches:all',
   seriesList:   () => 'series:list',

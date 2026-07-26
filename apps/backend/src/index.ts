@@ -21,6 +21,7 @@ import portalRoute from './routes/portal'
 import searchRoute from './routes/search'
 import streamRoute from './routes/stream'
 import oddsRoute from './routes/odds'
+import intelligenceRoute from './routes/intelligence'
 import { clientCount, initRealtime, publishOdds, publishScores } from './services/realtime'
 import { getLiveMatches } from './services/cricapi'
 import { cached, CACHE_KEYS, LIVE_MATCHES_TTL } from './services/cache'
@@ -115,6 +116,7 @@ async function start() {
   app.register(searchRoute)
   app.register(streamRoute)
   app.register(oddsRoute)
+  app.register(intelligenceRoute)
 
   warmCaches(redis, app.log).catch(() => {})
   // Push / wicket alerts off by default (lightweight info app). Set PUSH_ENABLED=1 to turn on.

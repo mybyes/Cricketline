@@ -8,10 +8,15 @@ import { PageRefresher } from '@/components/PageRefresher'
 import { Scorecard } from '@/components/Scorecard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Squads } from '@/components/Squads'
+import { InsightsStrip } from '@/components/InsightsStrip'
 import { LastBallBanner } from '@/components/LastBallBanner'
 import { MatchHistory } from '@/components/MatchHistory'
 import { OddsPanel } from '@/components/OddsPanel'
-import { getBallByBall, getMatchOdds, getScorecard, getSquad, type BbbBall, type MatchOddsBoard, type ScorecardData, type SquadTeam } from '@/lib/api'
+import {
+  getBallByBall, getMatchIntelligence, getMatchOdds, getScorecard, getSquad,
+  type BbbBall, type MatchOddsBoard, type ScorecardData, type SquadTeam,
+} from '@/lib/api'
+import type { MatchIntelligence } from '@/lib/intelligence'
 import { synthRatesBoard } from '@/lib/matchRates'
 import { getSiteUrl } from '@/lib/site'
 import { teamColor } from '@/lib/teamColors'
@@ -23,17 +28,19 @@ function seriesOf(name: string) {
   return parts.length >= 2 ? parts[parts.length - 1] : ''
 }
 
-async function loadMatch(id: string): Promise<{
+async function loadMatch(id: string, withIntel = false): Promise<{
   data: ScorecardData | null
   bbb: BbbBall[]
   squads: SquadTeam[]
   odds: MatchOddsBoard | null
+  intel: MatchIntelligence | null
 }> {
-  const [score, bbb, squad, odds] = await Promise.all([
+  const [score, bbb, squad, odds, intel] = await Promise.all([
     getScorecard(id),
     getBallByBall(id),
     getSquad(id),
     getMatchOdds(id),
+    withIntel ? getMatchIntelligence(id) : Promise.resolve({ data: null as MatchIntelligence | null }),
   ])
   const data = score.data && typeof score.data === 'object' && 'teams' in score.data ? score.data : null
   const oddsBoard = odds.data && Array.isArray(odds.data.matchOdds) ? odds.data : null
@@ -42,12 +49,13 @@ async function loadMatch(id: string): Promise<{
     bbb: Array.isArray(bbb.data) ? bbb.data : [],
     squads: Array.isArray(squad.data) ? squad.data : [],
     odds: oddsBoard,
+    intel: intel.data ?? null,
   }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
-  const { data } = await loadMatch(id)
+  const { data } = await loadMatch(id, false)
   const site = getSiteUrl()
   if (!data) return { title: 'Match not found' }
   const teams = data.teams.join(' vs ')
@@ -81,7 +89,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { data, bbb, squads, odds } = await loadMatch(id)
+  const { data, bbb, squads, odds, intel } = await loadMatch(id, true)
   if (!data) notFound()
 
   const site = getSiteUrl()
@@ -123,14 +131,18 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const ballsFaced = bbb.length || (active ? Math.floor(active.o) * 6 + Math.round((active.o % 1) * 10) : 0)
   const scoreLine = active ? `${batShort} ${active.r}-${active.w} (${ballsFaced} b)` : undefined
 
-  // Live Line: last ball + rates only. Hero already has score/status; Scorecard has batters.
+  // Insight-first Live: last ball → insights → chase → display rates (secondary).
   const liveContent = (
     <div className="m-live">
       {live && bbb.length > 0 ? <LastBallBanner bbb={bbb} scoreLine={scoreLine} /> : null}
-      <OddsPanel matchId={id} initial={odds} />
+      {live ? <InsightsStrip intel={intel} /> : null}
       {hasScorecard ? <ChaseStrip data={data} /> : (
         <div className="empty-state"><p className="empty-title">{data.status}</p><p className="empty-sub">Live line updates when play begins.</p></div>
       )}
+      <div className="m-live-rates">
+        <p className="m-live-rates-label">Display rates</p>
+        <OddsPanel matchId={id} initial={odds} />
+      </div>
       <AdSlot id={`match-${id}-live`} format="rectangle" />
     </div>
   )

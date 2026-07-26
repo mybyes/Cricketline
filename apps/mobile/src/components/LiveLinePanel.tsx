@@ -1,10 +1,14 @@
+import { useEffect, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import type { BbbBall } from '../types/extras'
 import type { Match } from '../types/match'
 import type { ScorecardData } from '../types/scorecard'
+import type { MatchIntelligence } from '../types/intelligence'
 import { colors } from '../theme/colors'
+import { fetchMatchIntelligence } from '../lib/api'
 import { synthRatesBoard, withSessionLadder } from '../lib/matchRates'
 import type { MatchOddsBoard } from '../types/odds'
+import { InsightsStrip } from './InsightsStrip'
 import { LastBallBanner } from './LastBallBanner'
 import { OtherLiveMatches } from './OtherLiveMatches'
 import { LineRatesPanel } from './panels/LineRatesPanel'
@@ -37,6 +41,26 @@ export function LiveLinePanel({
   odds?: MatchOddsBoard | null
 }) {
   const isLive = data.matchStarted && !data.matchEnded
+  const [intel, setIntel] = useState<MatchIntelligence | null>(null)
+
+  useEffect(() => {
+    if (!isLive || !data.id) {
+      setIntel(null)
+      return
+    }
+    let alive = true
+    const pull = async () => {
+      const res = await fetchMatchIntelligence(data.id)
+      if (alive && res.success && res.data) setIntel(res.data)
+    }
+    void pull()
+    const t = setInterval(() => { void pull() }, 12_000)
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+  }, [isLive, data.id, data.score?.[data.score.length - 1]?.r, data.score?.[data.score.length - 1]?.w, data.score?.[data.score.length - 1]?.o, bbb.length])
+
   const activeInning = data.scorecard?.[data.scorecard.length - 1]
   const rawBoard = odds ?? (isLive ? synthRatesBoard(data, bbb) : null)
   const board = rawBoard && isLive ? withSessionLadder(rawBoard, data, bbb) : rawBoard
@@ -81,6 +105,10 @@ export function LiveLinePanel({
         <LastBallBanner bbb={bbb} scoreLine={scoreLine} />
       ) : null}
 
+      {isLive ? <InsightsStrip intel={intel} /> : null}
+
+      {chase ? <Text style={styles.chase}>{chase}</Text> : null}
+
       {isLive && (rpb != null || ballsRem != null) && (
         <View style={styles.statRow}>
           {rpb != null ? <Text style={styles.statTxt}>Runs Per Ball: {rpb.toFixed(2)}</Text> : null}
@@ -88,9 +116,8 @@ export function LiveLinePanel({
         </View>
       )}
 
+      {isLive ? <Text style={styles.ratesLabel}>DISPLAY RATES</Text> : null}
       <LineRatesPanel data={data} board={board} battingHint={battingHint} />
-
-      {chase ? <Text style={styles.chase}>{chase}</Text> : null}
 
       {onSwitchMatch ? <OtherLiveMatches matches={otherLive} onSelect={onSwitchMatch} /> : null}
     </View>
@@ -103,6 +130,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4, marginBottom: 8,
   },
   statTxt: { fontSize: 13, fontWeight: '700', color: colors.text },
+  ratesLabel: {
+    fontSize: 10, fontWeight: '800', letterSpacing: 1,
+    color: colors.textDim, marginBottom: 6, marginTop: 4,
+  },
   chase: {
     fontSize: 13, fontWeight: '700', color: colors.accent,
     backgroundColor: 'rgba(240,162,2,0.12)',

@@ -1,5 +1,6 @@
 import { getApiUrl } from './apiUrl'
 import type { MatchOddsBoard } from './odds'
+import type { MatchIntelligence } from './intelligence'
 
 const API = getApiUrl()
 
@@ -232,6 +233,24 @@ export async function getLiveOdds(): Promise<ApiResult<MatchOddsBoard[]>> {
     return { data: [], stale: false, error: body.error }
   } catch (e: unknown) {
     return { data: [], stale: false, error: e instanceof Error ? e.message : 'Network error' }
+  }
+}
+
+/** Cricket Intelligence Engine — deterministic insights for a match. */
+export async function getMatchIntelligence(id: string): Promise<ApiResult<MatchIntelligence | null>> {
+  try {
+    const res = await fetch(`${API}/match/${id}/intelligence`, { next: { revalidate: 12 } })
+    const body = await res.json().catch(() => ({})) as {
+      success?: boolean
+      data?: MatchIntelligence
+      error?: string
+    }
+    if (body.success && body.data) {
+      return { data: body.data, stale: false }
+    }
+    return { data: null, stale: false, error: body.error ?? `API ${res.status}` }
+  } catch (e: unknown) {
+    return { data: null, stale: false, error: e instanceof Error ? e.message : 'Network error' }
   }
 }
 
