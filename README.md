@@ -1,7 +1,9 @@
-# Cricket Pulse (Cricketline)
+# Cricket Pulse
 
-**Live cricket scores, ball-by-ball, scorecards & fixtures** — fast, free, and fully usable
-without an account. A monorepo with one backend feeding a web portal and an Android/iOS app.
+**Live cricket, match context, and smart insights** — scores, scorecards & fixtures.
+Fast, free, and fully usable without an account. Monorepo: one backend → web + mobile.
+
+Public brand: **Cricket Pulse** (repo folder may still say `Cricketline`).
 
 > 📓 **Resuming work / new machine / fresh session?** Read **[PROJECT_LOG.md](PROJECT_LOG.md)**
 > first — it captures the decisions, rationale, brand history, and open items.
@@ -34,8 +36,9 @@ pnpm dev:web         # portal on :3001
 pnpm dev:mobile      # Expo — press w for browser, a for Android, or scan the QR
 ```
 
-That's it — with **zero configuration** the whole stack runs on a built-in demo dataset. The
-clients default to `http://localhost:3000` in dev, so nothing else to wire up.
+That's it — with **zero configuration** the stack runs on the built-in demo dataset and an
+**in-memory Redis** fallback when `UPSTASH_REDIS_URL` is unset. Clients default to
+`http://localhost:3000` in dev.
 
 ```bash
 pnpm test            # unit tests (backend fallback chain + auth + logic, web win-prob math)
@@ -106,7 +109,7 @@ Everything below is **optional** — the app runs with none of it. Add only what
 
 **`apps/backend/.env`**
 ```bash
-UPSTASH_REDIS_URL=redis://…          # required to run (cache + comments/poll)
+UPSTASH_REDIS_URL=redis://…          # optional locally (defaults to memory://); required in prod
 CRICAPI_KEY=…                        # or CRICAPI_KEYS=k1,k2,k3 — omit for demo mode
 SEED_DATA=1                          # force demo mode even with a key (dev)
 DATABASE_URL=…                       # optional Supabase Postgres (else Redis) for favorites/users

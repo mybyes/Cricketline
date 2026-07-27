@@ -35,13 +35,16 @@ import { warmCaches } from './services/cacheWarmer'
 import { startWicketWatcher } from './services/wicketWatcher'
 import { SEED_MODE } from './services/cricapi'
 
-const redisUrl = process.env.UPSTASH_REDIS_URL
 const cricApiKey = process.env.CRICAPI_KEY
-
-if (!redisUrl || redisUrl.includes('your_upstash_url_here')) {
-  console.error('Missing UPSTASH_REDIS_URL — set it in apps/backend/.env')
-  process.exit(1)
-}
+// Local/dev: missing Redis → in-memory store (true zero-config). Production should set a real URL.
+const redisUrl = (() => {
+  const raw = (process.env.UPSTASH_REDIS_URL ?? '').trim()
+  if (!raw || raw.includes('your_upstash_url_here')) {
+    console.warn('⚠ UPSTASH_REDIS_URL unset — using memory:// (demo/local only)')
+    return 'memory://'
+  }
+  return raw
+})()
 // No key required: the app runs in seed/demo mode (built-in dataset). Set a real
 // CRICAPI_KEY (and leave SEED_DATA unset) to serve live data at the final stage.
 if (SEED_MODE) {
@@ -175,6 +178,7 @@ async function start() {
       score: '/match/:id/score',
       odds: '/match/:id/odds',
       oddsLive: '/odds/live',
+      intelligenceLive: '/intelligence/live',
       stream: '/stream',
       series: '/series',
     },

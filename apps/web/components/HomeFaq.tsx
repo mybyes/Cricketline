@@ -5,10 +5,17 @@ export function HomeFaq() {
       <h2 id="faq-title">FAQ</h2>
       <div className="faq-grid">
         <div>
-          <h3>What is Live Line?</h3>
+          <h3>What is Cricket Pulse?</h3>
           <p>
-            Live Line shows ball-by-ball score updates with display-only match rates and the next session
-            market — for information only. We do not accept bets or wagers.
+            A free companion for live cricket scores, match context, and smart insights — plus
+            scorecards, squads, and series tables.
+          </p>
+        </div>
+        <div>
+          <h3>Are insights predictions?</h3>
+          <p>
+            No. Win lean and pressure are deterministic estimates from the current match state —
+            not guaranteed outcomes and not betting advice. See How insights work.
           </p>
         </div>
         <div>
@@ -23,13 +30,6 @@ export function HomeFaq() {
           <p>
             No. Scores, scorecards, squads, and history are free without login. Optional Google sign-in is
             only for match alerts when enabled.
-          </p>
-        </div>
-        <div>
-          <h3>Is there an Android app?</h3>
-          <p>
-            Yes — Cricket Pulse for Android mirrors the Live Line experience. Web stays the SEO surface for
-            search; the app is for faster follow-along during play.
           </p>
         </div>
       </div>

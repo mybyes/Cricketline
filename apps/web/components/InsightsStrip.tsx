@@ -1,9 +1,18 @@
+import Link from 'next/link'
 import type { MatchIntelligence } from '@/lib/intelligence'
 
 function shortTeam(name: string) {
   const parts = name.trim().split(/\s+/)
   if (parts.length === 1) return parts[0].slice(0, 4).toUpperCase()
   return parts.map((p) => p[0]).join('').slice(0, 4).toUpperCase()
+}
+
+function freshness(updatedAt: number) {
+  const sec = Math.max(0, Math.round((Date.now() - updatedAt) / 1000))
+  if (sec < 5) return 'Just now'
+  if (sec < 60) return `${sec}s ago`
+  const min = Math.round(sec / 60)
+  return `${min}m ago`
 }
 
 /** Compact CIE insights under Live — chalkboard accent, no AI jargon. */
@@ -19,15 +28,20 @@ export function InsightsStrip({ intel }: { intel: MatchIntelligence | null }) {
 
   return (
     <section className="ins-strip" aria-label="Match insights">
-      <div className="ins-kicker">Insights</div>
+      <div className="ins-kicker-row">
+        <div className="ins-kicker">Match story</div>
+        {intel.updatedAt ? (
+          <span className="ins-fresh" title="Insight refresh time">{freshness(intel.updatedAt)}</span>
+        ) : null}
+      </div>
       <h3 className="ins-headline">{intel.narrative.headline}</h3>
       <p className="ins-summary">{intel.narrative.summary}</p>
 
       {win && batPct != null && bowlPct != null ? (
-        <div className="ins-win" aria-label={`${shortTeam(win.leader)} ${Math.max(batPct, bowlPct)} percent winning lean`}>
+        <div className="ins-win" aria-label={`${shortTeam(win.leader)} ${Math.max(batPct, bowlPct)} percent win lean estimate`}>
           <div className="ins-win-labels">
             <span className="ins-win-leader">{shortTeam(win.leader)} {Math.max(batPct, bowlPct)}%</span>
-            <span className="ins-win-sub">winning lean</span>
+            <span className="ins-win-sub">win lean · estimate</span>
           </div>
           <div className="ins-win-track" role="img" aria-hidden>
             <div className="ins-win-fill" style={{ width: `${batPct}%` }} />
@@ -36,6 +50,10 @@ export function InsightsStrip({ intel }: { intel: MatchIntelligence | null }) {
             <span>Bat {batPct}%</span>
             <span>Bowl {bowlPct}%</span>
           </div>
+          <p className="ins-estimate-note">
+            Estimate from current match state — not a prediction.{' '}
+            <Link href="/methodology" className="ins-method-link">How it works</Link>
+          </p>
         </div>
       ) : null}
 

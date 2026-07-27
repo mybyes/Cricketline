@@ -1,14 +1,14 @@
 import Link from 'next/link'
 import { AuthButton } from './AuthButton'
+import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
 
+/** Desktop: keep primary nav lean — Fixtures/Results/Teams live under More. */
 const NAV = [
   { href: '/', label: 'Home' },
   { href: '/matches', label: 'Matches' },
   { href: '/series', label: 'Series' },
-  { href: '/fixtures', label: 'Fixtures' },
-  { href: '/results', label: 'Results' },
   { href: '/rankings', label: 'Rankings' },
-  { href: '/teams', label: 'Teams' },
+  { href: '/more', label: 'More' },
 ]
 
 /** Brand + nav only — live scores live in the Home list (ticker gets cluttered). */
@@ -20,8 +20,8 @@ export function SiteHeader() {
           <Link href="/" className="brand-link">
             <span className="brand-mark" aria-hidden>CP</span>
             <div>
-              <p className="brand-title">Cricket Pulse</p>
-              <p className="brand-tagline">Live Line &amp; AI</p>
+              <p className="brand-title">{BRAND_NAME}</p>
+              <p className="brand-tagline">{BRAND_TAGLINE}</p>
             </div>
           </Link>
         </div>

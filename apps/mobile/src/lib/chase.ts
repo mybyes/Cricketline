@@ -1,10 +1,11 @@
-import type { ScorecardData } from '@/lib/api'
+import type { ScorecardData } from '../types/scorecard'
 
 function oversToBalls(o: number): number {
   const whole = Math.floor(o)
   return whole * 6 + Math.round((o - whole) * 10)
 }
 
+/** Limited-overs chase summary for the top scoreboard. */
 export function getChaseLine(data: ScorecardData): {
   target: number
   need: number
@@ -24,27 +25,11 @@ export function getChaseLine(data: ScorecardData): {
     : 20
   if (!oversTotal) return null
 
-  const target = (innings[0].totals?.r ?? 0) + 1
+  const target = (innings[0].totals?.r ?? data.score?.[0]?.r ?? 0) + 1
   const ballsLeft = Math.max(0, oversTotal * 6 - balls)
   const need = Math.max(0, target - totals.r)
   const rrr = ballsLeft > 0 ? need / (ballsLeft / 6) : 0
   const team = cur.inning.replace(/ inning.*$/i, '')
   return { target, need, ballsLeft, rrr, team }
-}
-
-/** Chase target line — sits under the top scoreboard. */
-export function ChaseStrip({ data }: { data: ScorecardData }) {
-  const chase = getChaseLine(data)
-  if (!chase) return null
-
-  return (
-    <p className="hero-target">
-      <span className="hero-target-pill">Target {chase.target}</span>
-      <span>
-        {chase.team} need <strong>{chase.need}</strong> from {chase.ballsLeft} balls
-        {chase.rrr > 0 ? <> · RRR <strong>{chase.rrr.toFixed(2)}</strong></> : null}
-      </span>
-    </p>
-  )
 }
 

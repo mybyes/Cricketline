@@ -1,6 +1,6 @@
 import { getApiUrl } from './apiUrl'
 import type { MatchOddsBoard } from './odds'
-import type { MatchIntelligence } from './intelligence'
+import type { MatchIntelligence, MatchIntelligenceCard } from './intelligence'
 
 const API = getApiUrl()
 
@@ -231,6 +231,24 @@ export async function getLiveOdds(): Promise<ApiResult<MatchOddsBoard[]>> {
       return { data: body.data, stale: false }
     }
     return { data: [], stale: false, error: body.error }
+  } catch (e: unknown) {
+    return { data: [], stale: false, error: e instanceof Error ? e.message : 'Network error' }
+  }
+}
+
+/** Slim CIE cards for home Live rails. */
+export async function getLiveIntelligence(): Promise<ApiResult<MatchIntelligenceCard[]>> {
+  try {
+    const res = await fetch(`${API}/intelligence/live`, { next: { revalidate: 12 } })
+    const body = await res.json().catch(() => ({})) as {
+      success?: boolean
+      data?: MatchIntelligenceCard[]
+      error?: string
+    }
+    if (body.success && Array.isArray(body.data)) {
+      return { data: body.data, stale: false }
+    }
+    return { data: [], stale: false, error: body.error ?? `API ${res.status}` }
   } catch (e: unknown) {
     return { data: [], stale: false, error: e instanceof Error ? e.message : 'Network error' }
   }

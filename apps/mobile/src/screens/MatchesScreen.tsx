@@ -11,8 +11,11 @@ import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
 import { StaleBanner } from '../components/StaleBanner'
 import { useFavorites } from '../context/FavoritesContext'
 import { staleNotice } from '../lib/cacheTime'
-import { fetchLiveMatches, fetchLiveOdds, fetchRecentMatches, fetchUpcomingMatches } from '../lib/api'
+import {
+  fetchLiveIntelligence, fetchLiveMatches, fetchLiveOdds, fetchRecentMatches, fetchUpcomingMatches,
+} from '../lib/api'
 import { loadHomeCache, mergeMatchList, saveHomeCache } from '../lib/matchCache'
+import type { MatchIntelligenceCard } from '../types/intelligence'
 import type { Match, RootStackParamList } from '../types/match'
 import type { MatchOddsBoard } from '../types/odds'
 import { colors } from '../theme/colors'
@@ -29,6 +32,7 @@ export function MatchesScreen() {
   const [upcoming, setUpcoming] = useState<Match[]>([])
   const [recent, setRecent] = useState<Match[]>([])
   const [oddsById, setOddsById] = useState<Record<string, MatchOddsBoard>>({})
+  const [intelById, setIntelById] = useState<Record<string, MatchIntelligenceCard>>({})
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [stale, setStale] = useState(false)
@@ -41,17 +45,23 @@ export function MatchesScreen() {
     if (pull) setRefreshing(true)
     else if (!silent) setLoading(true)
 
-    const [l, u, r, o] = await Promise.all([
+    const [l, u, r, o, intel] = await Promise.all([
       fetchLiveMatches(),
       fetchUpcomingMatches(),
       fetchRecentMatches(),
       fetchLiveOdds(),
+      fetchLiveIntelligence(),
     ])
 
     if (o.success && Array.isArray(o.data)) {
       const map: Record<string, MatchOddsBoard> = {}
       for (const board of o.data) map[board.matchId] = board
       setOddsById(map)
+    }
+    if (intel.success && Array.isArray(intel.data)) {
+      const map: Record<string, MatchIntelligenceCard> = {}
+      for (const card of intel.data) map[card.matchId] = card
+      setIntelById(map)
     }
 
     const disk = await loadHomeCache()
@@ -111,6 +121,7 @@ export function MatchesScreen() {
             onToggleFavorite={() => toggle(m)}
             onPress={() => open(m)}
             odds={oddsById[m.id] ?? null}
+            intel={intelById[m.id] ?? null}
             onOpenTable={m.series_id ? () => openSeriesTable(m) : undefined}
           />
           {idx === 1 ? <AdSlot size="inline" /> : null}

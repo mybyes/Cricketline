@@ -11,7 +11,10 @@ import { MatchCardSkeleton } from '../components/MatchCardSkeleton'
 import { StaleBanner } from '../components/StaleBanner'
 import { useFavorites } from '../context/FavoritesContext'
 import { staleNotice } from '../lib/cacheTime'
-import { fetchLiveMatches, fetchLiveOdds, fetchRecentMatches, fetchUpcomingMatches } from '../lib/api'
+import {
+  fetchLiveIntelligence, fetchLiveMatches, fetchLiveOdds, fetchRecentMatches, fetchUpcomingMatches,
+} from '../lib/api'
+import type { MatchIntelligenceCard } from '../types/intelligence'
 import type { MatchOddsBoard } from '../types/odds'
 import {
   hydrateHomeFromFavorites,
@@ -41,6 +44,7 @@ export function HomeScreen() {
   const [notice, setNotice] = useState<string | null>(null)
   const [tab, setTab] = useState<'featured' | 'live'>('featured')
   const [oddsById, setOddsById] = useState<Record<string, MatchOddsBoard>>({})
+  const [intelById, setIntelById] = useState<Record<string, MatchIntelligenceCard>>({})
   const bootstrapped = useRef(false)
   const liveRef = useRef(live)
   const recentRef = useRef(recent)
@@ -55,17 +59,23 @@ export function HomeScreen() {
     if (pull) setRefreshing(true)
     else if (!silent) setLoading(true)
 
-    const [l, r, u, o] = await Promise.all([
+    const [l, r, u, o, intel] = await Promise.all([
       fetchLiveMatches(),
       fetchRecentMatches(),
       fetchUpcomingMatches(),
       fetchLiveOdds(),
+      fetchLiveIntelligence(),
     ])
 
     if (o.success && Array.isArray(o.data)) {
       const map: Record<string, MatchOddsBoard> = {}
       for (const board of o.data) map[board.matchId] = board
       setOddsById(map)
+    }
+    if (intel.success && Array.isArray(intel.data)) {
+      const map: Record<string, MatchIntelligenceCard> = {}
+      for (const card of intel.data) map[card.matchId] = card
+      setIntelById(map)
     }
 
     const disk = await loadHomeCache()
@@ -168,6 +178,7 @@ export function HomeScreen() {
                 onToggleFavorite={() => toggle(m)}
                 onPress={() => open(m)}
                 odds={oddsById[m.id] ?? null}
+                intel={intelById[m.id] ?? null}
                 onOpenTable={m.series_id ? () => openSeriesTable(seriesName(m), [m]) : undefined}
               />
             </View>
@@ -196,7 +207,7 @@ export function HomeScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <AppHeader
         title="Cricket Pulse"
-        subtitle="Live Line & AI"
+        subtitle="Live cricket · smart insights"
         right={matchCount > 0 ? (
           <View style={styles.pill}><Text style={styles.pillT}>{liveOnly.length}</Text></View>
         ) : undefined}

@@ -53,7 +53,7 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <AppHeader title="More" subtitle={user ? user.name ?? 'Signed in' : 'Live Line & AI'} />
+      <AppHeader title="More" subtitle={user ? user.name ?? 'Signed in' : 'Live cricket · smart insights'} />
       <ScrollView contentContainerStyle={styles.scroll}>
         {enabled && (
           <Section title="Account">
@@ -104,6 +104,7 @@ export function SettingsScreen() {
 
         <Section title="Info & legal">
           <Row label="About Cricket Pulse" onPress={() => open('/about')} />
+          <Row label="How insights work" onPress={() => open('/methodology')} />
           <Row label="Privacy policy" onPress={() => open('/privacy')} />
           <Row label="Terms of use" onPress={() => open('/terms')} last />
         </Section>
@@ -111,7 +112,7 @@ export function SettingsScreen() {
         <Text style={styles.version}>
           Version {APP_VERSION}
           {'\n'}
-          Display-only markets · Not affiliated with ICC or BCCI
+          Live cricket · smart insights · Not affiliated with ICC or BCCI
         </Text>
 
         <Pressable onPress={() => setShowAdvanced((v) => !v)} style={styles.advancedToggle}>

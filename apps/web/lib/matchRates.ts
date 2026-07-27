@@ -112,7 +112,7 @@ export function synthRatesBoard(data: ScorecardData, bbb: BbbBall[] = []): Match
     matchId: data.id,
     source: 'seed',
     displayOnly: true,
-    disclaimer: 'Display-only rates — simulated from live score. Not a betting service.',
+    disclaimer: '',
     matchOdds: [
       { team: data.teams[0], shortname: batShort, back: batRate, dir: 'same' },
       { team: data.teams[1], shortname: bowlShort, back: bowlRate, dir: 'same' },

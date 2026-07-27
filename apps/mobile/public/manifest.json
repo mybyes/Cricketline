@@ -1,9 +1,9 @@
 {
-  "name": "Cricket Pulse – Live Line & AI",
+  "name": "Cricket Pulse — live cricket · smart insights",
   "short_name": "Cricket Pulse",
-  "description": "Live cricket line & markets — odds, session, scorecard. Display-only. Free, no login.",
+  "description": "Live cricket scores, match context, and smart insights. Free, no login.",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#F2EFE6",
-  "theme_color": "#0B1220"
+  "theme_color": "#163528"
 }

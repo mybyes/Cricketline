@@ -6,12 +6,12 @@ import { getLiveMatches } from '@/lib/api'
 export const revalidate = 15
 
 export const metadata: Metadata = {
-  title: 'Live Cricket Scores & Markets',
-  description: 'Live cricket scores and display-only match odds for all ongoing matches — IPL, Tests, ODIs and T20.',
+  title: 'Live cricket scores',
+  description: 'Live cricket scores and match insights for ongoing games — IPL, Tests, ODIs and T20.',
   alternates: { canonical: '/live' },
   openGraph: {
-    title: 'Live Cricket Scores & Markets | Cricket Pulse',
-    description: 'All ongoing matches with live line updates and display-only markets.',
+    title: 'Live cricket scores | Cricket Pulse',
+    description: 'All ongoing matches with live scores and smart insights.',
     url: '/live',
     type: 'website',
   },

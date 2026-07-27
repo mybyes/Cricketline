@@ -1,11 +1,12 @@
 import type { Redis } from 'ioredis'
-import { getMatchBbb, getMatchScore } from '../services/cricapi'
+import { getLiveMatches, getMatchBbb, getMatchScore } from '../services/cricapi'
 import { cached, CACHE_KEYS } from '../services/cache'
 import { buildMatchState } from './matchState'
 import { aggregateIntelligence } from './aggregator'
-import type { MatchIntelligence } from './types'
+import type { MatchIntelligence, MatchIntelligenceCard } from './types'
 
 const INTEL_TTL = 12
+const LIVE_INTEL_CAP = 8
 
 export async function getMatchIntelligence(
   redis: Redis,
@@ -36,4 +37,28 @@ export async function getMatchIntelligence(
   const intel = aggregateIntelligence(state)
   await redis.set(intelKey, JSON.stringify(intel), 'EX', INTEL_TTL)
   return intel
+}
+
+function toCard(intel: MatchIntelligence): MatchIntelligenceCard {
+  return {
+    matchId: intel.matchId,
+    fingerprint: intel.fingerprint,
+    updatedAt: intel.updatedAt,
+    headline: intel.narrative.headline,
+    winProbability: intel.winProbability,
+    pressureLevel: intel.pressure.level,
+    momentumDirection: intel.momentum.direction,
+  }
+}
+
+/** Home Live rail — CIE cards for up to LIVE_INTEL_CAP live matches. */
+export async function getLiveIntelligenceCards(redis: Redis): Promise<MatchIntelligenceCard[]> {
+  const live = await getLiveMatches(redis)
+  const ids = live.slice(0, LIVE_INTEL_CAP).map((m) => m.id)
+  const settled = await Promise.allSettled(ids.map((id) => getMatchIntelligence(redis, id)))
+  const out: MatchIntelligenceCard[] = []
+  for (const r of settled) {
+    if (r.status === 'fulfilled' && r.value) out.push(toCard(r.value))
+  }
+  return out
 }

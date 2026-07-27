@@ -3,7 +3,7 @@ import { PortalLayout } from '@/components/PortalLayout'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'Privacy policy for Cricket Pulse – Live Line & AI web and Android apps.',
+  description: 'Privacy policy for Cricket Pulse web and Android apps.',
   alternates: { canonical: '/privacy' },
 }
 
@@ -20,8 +20,7 @@ export default function PrivacyPage() {
         </p>
         <h2>What we do not do</h2>
         <p>
-          We do not sell personal data. We do not run a betting wallet. Display-only market rates are not
-          linked to personal wagering profiles.
+          We do not sell personal data. We do not run a betting wallet or wagering profiles.
         </p>
         <h2>Cookies &amp; storage</h2>
         <p>

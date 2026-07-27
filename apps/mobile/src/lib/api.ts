@@ -2,7 +2,7 @@ import type { LiveMatchesResponse } from '../types/match'
 import type { ScorecardResponse } from '../types/scorecard'
 import type { BbbBall, MatchHistoryData, SeriesItem, SeriesTableData, SquadTeam } from '../types/extras'
 import type { MatchOddsBoard } from '../types/odds'
-import type { MatchIntelligence } from '../types/intelligence'
+import type { MatchIntelligence, MatchIntelligenceCard } from '../types/intelligence'
 
 import { getApiUrl as resolveApiUrl } from './apiUrl'
 
@@ -70,6 +70,13 @@ export async function fetchMatchOdds(matchId: string) {
 export async function fetchMatchIntelligence(matchId: string) {
   return api<{ success: boolean; data: MatchIntelligence; error?: string }>(
     `/match/${matchId}/intelligence`,
+  )
+}
+
+/** Slim CIE cards for home Live rails. */
+export async function fetchLiveIntelligence() {
+  return api<{ success: boolean; data: MatchIntelligenceCard[]; error?: string }>(
+    '/intelligence/live',
   )
 }
 

@@ -52,14 +52,15 @@ export function MoreMenu() {
         title="Info & legal"
         rows={[
           { href: '/about', label: 'About Cricket Pulse' },
+          { href: '/methodology', label: 'How insights work' },
           { href: '/privacy', label: 'Privacy policy' },
           { href: '/terms', label: 'Terms of use' },
         ]}
       />
       <p className="more-version">
-        Cricket Pulse · Live Line &amp; AI
+        Cricket Pulse · live cricket · smart insights
         <br />
-        Display-only markets · Not affiliated with ICC or BCCI
+        Not affiliated with ICC or BCCI
       </p>
     </div>
   )

@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   const { name } = await params
   const team = decodeURIComponent(name)
   const title = `${team} — Live Scores, Fixtures & Results`
-  const description = `Follow ${team}: live scores, display-only markets, upcoming fixtures, recent results and rankings on Cricket Pulse.`
+  const description = `Follow ${team}: live scores, upcoming fixtures, recent results and rankings on Cricket Pulse.`
   const url = `/team/${encodeURIComponent(team)}`
   return {
     title,

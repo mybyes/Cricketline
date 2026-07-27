@@ -6,21 +6,21 @@ export interface BallColor {
   label: string
 }
 
-/** Cricline-style: W=red, 6=purple, 4=orange, dot=dark grey, 1-3=blue */
+/** Hierarchy: W crimson, 6 cyan, 4 green — chalk-friendly, not neon glow. */
 export function ballColor(b: BbbBall): BallColor {
   const e = b.event?.toLowerCase() ?? ''
   const runs = typeof b.runs === 'number' ? b.runs : parseInt(String(b.runs ?? ''), 10)
 
   if (e === 'w' || e === 'wicket' || e.includes('wicket') || e.includes('out')) {
-    return { bg: '#e53935', text: '#fff', label: 'W' }
+    return { bg: '#FF1744', text: '#fff', label: 'W' }
   }
-  if (runs === 6) return { bg: '#7b1fa2', text: '#fff', label: '6' }
-  if (runs === 4) return { bg: '#1E88E5', text: '#fff', label: '4' }
-  if (runs === 0) return { bg: '#ECEFF1', text: '#37474F', label: '0' }
-  if (runs >= 1 && runs <= 3) return { bg: '#43A047', text: '#fff', label: String(runs) }
+  if (runs === 6) return { bg: '#00B8D4', text: '#fff', label: '6' }
+  if (runs === 4) return { bg: '#00C853', text: '#fff', label: '4' }
+  if (runs === 0) return { bg: '#424242', text: '#fff', label: '·' }
+  if (runs >= 1 && runs <= 3) return { bg: '#1565c0', text: '#fff', label: String(runs) }
 
   const label = Number.isFinite(runs) ? String(runs) : (b.event ?? '0')
-  return { bg: '#43A047', text: '#fff', label }
+  return { bg: '#1565c0', text: '#fff', label }
 }
 
 export function ballSummaryLabel(b: BbbBall): string {

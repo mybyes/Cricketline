@@ -1,13 +1,30 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { MatchOddsBoard } from '@/lib/odds'
+import type { MatchOddsBoard, OddsDirection, TeamOdds } from '@/lib/odds'
 import { activeSession, matchRatePair, sessionPair } from '@/lib/matchRates'
 import { getPublicApiUrl } from '@/lib/apiUrl'
 
-/**
- * Both teams' match rates + one live session (next checkpoint only).
- */
+const DIR_UP = '\u25B2'
+const DIR_DOWN = '\u25BC'
+
+function dirMark(dir?: OddsDirection) {
+  if (dir === 'up') return DIR_UP
+  if (dir === 'down') return DIR_DOWN
+  return null
+}
+
+/** Lower quote => more favoured. Returns lean % for team A. */
+function leanPct(a?: TeamOdds, b?: TeamOdds): number {
+  const ra = a?.back && a.back > 0 ? a.back : 0
+  const rb = b?.back && b.back > 0 ? b.back : 0
+  if (!ra || !rb) return 50
+  const invA = 1 / ra
+  const invB = 1 / rb
+  return Math.round((invA / (invA + invB)) * 100)
+}
+
+/** Chalkboard rate pulse - duel lean + session tape. */
 export function OddsPanel({
   matchId,
   initial,
@@ -91,59 +108,89 @@ export function OddsPanel({
 
   if (!board) {
     return (
-      <div className="odds-panel empty-state">
-        <p className="empty-title">Rates not available yet</p>
-        <p className="empty-sub">Match rate & session appear when the line is live.</p>
+      <div className="rp-card rp-empty">
+        <span className="rp-kicker">Match rate</span>
+        <p className="rp-empty-title">Rates not available yet</p>
+        <p className="rp-empty-sub">Appear when the line is live.</p>
       </div>
     )
   }
 
+  const [t0, t1] = board.matchOdds
   const session = activeSession(board)
+  const sessPair = session ? sessionPair(session) : null
+  const lean = leanPct(t0, t1)
 
   return (
-    <div className={`odds-panel odds-simple${compact ? ' odds-compact' : ''}`}>
-      <div className="odds-head">
-        <span className="odds-title">Match rate</span>
-        <span className="odds-badge">display only</span>
+    <div className={`rp-card${compact ? ' rp-compact' : ''}${board.suspended ? ' rp-suspended' : ''}`}>
+      <div className="rp-head">
+        <span className="rp-kicker">Match rate</span>
+        {board.suspended ? (
+          <span className="rp-tag rp-tag-off">Suspended</span>
+        ) : (
+          <span className="rp-tag"><span className="rp-dot" /> Live</span>
+        )}
       </div>
 
-      {board.suspended ? <p className="odds-suspended">Line suspended</p> : null}
-
-      {board.matchOdds.slice(0, 2).map((o) => {
-        const [a, b] = matchRatePair(o.back, o.lay)
-        return (
-          <div
-            key={o.team}
-            className={`odds-rate-row ${o.dir === 'up' ? 'odds-up' : o.dir === 'down' ? 'odds-down' : ''}`}
-          >
-            <span className="odds-rate-label">{o.shortname || o.team}</span>
-            <span className="odds-dual">
-              <span className="odds-rate-box odds-box-pink">{a}</span>
-              <span className="odds-rate-box odds-box-green">{b}</span>
-            </span>
-          </div>
-        )
-      })}
-
-      {session ? (() => {
-        const [a, b] = sessionPair(session)
-        return (
-          <>
-            <div className="odds-section-label" style={{ marginTop: 12 }}>Session</div>
-            <div
-              className={`odds-rate-row odds-sess-row ${session.status === 'settled' ? 'odds-settled' : ''}`}
-            >
-              <span className="odds-rate-label">{session.name}</span>
-              <span className="odds-dual">
-                <span className="odds-rate-box odds-box-pink">{a || '—'}</span>
-                <span className="odds-rate-box odds-box-green">{b || '—'}</span>
-              </span>
+      {t0 && t1 ? (
+        <div className="rp-arena" aria-label="Team match rates">
+          <RateSide team={t0} align="left" />
+          <div className="rp-mid">
+            <div className="rp-lean" aria-hidden>
+              <div className="rp-lean-a" style={{ width: `${lean}%` }} />
+              <div className="rp-lean-b" style={{ width: `${100 - lean}%` }} />
             </div>
-          </>
-        )
-      })() : null}
+            <span className="rp-mid-label">lean</span>
+          </div>
+          <RateSide team={t1} align="right" />
+        </div>
+      ) : (
+        <div className="rp-arena rp-arena-solo">
+          {board.matchOdds.slice(0, 2).map((t) => (
+            <RateSide key={t.team} team={t} align="left" />
+          ))}
+        </div>
+      )}
 
-      <p className="odds-disclaimer">{board.disclaimer}</p>
+      {session && sessPair ? (
+        <div className={`rp-sess${session.status === 'settled' ? ' rp-settled' : ''}`}>
+          <div className="rp-sess-meta">
+            <span className="rp-kicker">Session</span>
+            <span className="rp-sess-name">{session.name}</span>
+          </div>
+          <div className="rp-tape">
+            <div className="rp-wing">
+              <span className="rp-wing-label">Yes</span>
+              <span className="rp-wing-val">{sessPair[0] || '—'}</span>
+            </div>
+            <div className="rp-pin">
+              <span className="rp-pin-val">{session.line ?? '—'}</span>
+              <span className="rp-pin-label">line</span>
+            </div>
+            <div className="rp-wing rp-wing-b">
+              <span className="rp-wing-label">No</span>
+              <span className="rp-wing-val">{sessPair[1] || '—'}</span>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function RateSide({ team, align }: { team: TeamOdds; align: 'left' | 'right' }) {
+  const [a, b] = matchRatePair(team.back, team.lay)
+  const mark = dirMark(team.dir)
+  return (
+    <div className={`rp-side rp-side-${align} ${team.dir === 'up' ? 'rp-up' : team.dir === 'down' ? 'rp-down' : ''}`}>
+      <div className="rp-side-top">
+        <span className="rp-team">{team.shortname || team.team}</span>
+        {mark ? <span className={`rp-dir rp-dir-${team.dir}`}>{mark}</span> : null}
+      </div>
+      <div className="rp-nums">
+        <span className="rp-num">{a}</span>
+        <span className="rp-num-sub">{b}</span>
+      </div>
     </div>
   )
 }

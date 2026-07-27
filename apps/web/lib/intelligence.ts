@@ -2,6 +2,17 @@
 
 export type PressureLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME'
 
+/** Slim home-rail card from GET /intelligence/live */
+export interface MatchIntelligenceCard {
+  matchId: string
+  fingerprint: string
+  updatedAt: number
+  headline: string
+  winProbability: { battingPct: number; bowlingPct: number; leader: string } | null
+  pressureLevel: PressureLevel
+  momentumDirection: 'UP' | 'DOWN' | 'FLAT'
+}
+
 export interface MatchIntelligence {
   matchId: string
   fingerprint: string

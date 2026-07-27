@@ -40,5 +40,4 @@ export interface MatchOddsBoard {
   suspended?: boolean
 }
 
-export const ODDS_DISCLAIMER =
-  'Display-only market rates for information. Not a betting service — no wagers accepted.'
+export const ODDS_DISCLAIMER = ''

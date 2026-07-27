@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import type { MatchIntelligenceCard } from '../types/intelligence'
 import type { Match } from '../types/match'
 import type { MatchOddsBoard } from '../types/odds'
 import { colors } from '../theme/colors'
@@ -8,17 +9,23 @@ import {
 } from '../theme/matchUtils'
 import { TeamAvatar } from './TeamAvatar'
 
+function shortLeader(name: string) {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 4).toUpperCase()
+  return parts.map((p) => p[0]).join('').slice(0, 4).toUpperCase()
+}
+
 /**
  * Slim chalk match card for rails.
- * Keep: format · series, LIVE pill, shortnames, score(+overs), one status line, optional rates.
- * Drop: duplicate context, full names, venue, heavy amber bar, big badges.
+ * Live: score → CIE story + win lean → optional rates → status.
  */
 export function MatchCard({
-  match, onPress, isFavorite, onToggleFavorite, odds, onOpenTable, flush,
+  match, onPress, isFavorite, onToggleFavorite, odds, intel, onOpenTable, flush,
 }: {
   match: Match; onPress: () => void; isFavorite?: boolean
   onToggleFavorite?: () => void; showDate?: boolean
   odds?: MatchOddsBoard | null
+  intel?: MatchIntelligenceCard | null
   onOpenTable?: () => void
   flush?: boolean
 }) {
@@ -26,6 +33,8 @@ export function MatchCard({
   const series = seriesName(match)
   const fmt = formatType(match)
   const isLive = match.matchStarted && !match.matchEnded
+  const win = intel?.winProbability
+  const leanPct = win ? Math.max(win.battingPct, win.bowlingPct) : null
 
   const handlePress = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
@@ -71,6 +80,27 @@ export function MatchCard({
         <TeamCol match={match} index={1} score={formatScore(s1)} active={isLive && !!s1} right />
       </View>
 
+      {isLive && intel?.headline ? (
+        <View style={styles.cie}>
+          <Text style={styles.cieHeadline} numberOfLines={2}>{intel.headline}</Text>
+          {win && leanPct != null ? (
+            <View>
+              <View style={styles.cieLeanRow}>
+                <Text style={styles.cieLean}>
+                  {shortLeader(win.leader)} {leanPct}% lean
+                </Text>
+                <Text style={[styles.ciePressure, pressureStyle(intel.pressureLevel)]}>
+                  {intel.pressureLevel}
+                </Text>
+              </View>
+              <View style={styles.cieTrack}>
+                <View style={[styles.cieFill, { width: `${win.battingPct}%` }]} />
+              </View>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
       {isLive && odds?.matchOdds?.length ? (
         <View style={styles.oddsRow}>
           {odds.matchOdds.slice(0, 2).map((o) => (
@@ -93,6 +123,12 @@ export function MatchCard({
       ) : null}
     </Pressable>
   )
+}
+
+function pressureStyle(level: string) {
+  if (level === 'HIGH' || level === 'EXTREME') return { color: '#FF8A80' }
+  if (level === 'MEDIUM') return { color: colors.accent }
+  return { color: '#A8D5B5' }
 }
 
 function TeamCol({
@@ -160,6 +196,42 @@ const styles = StyleSheet.create({
   short: { fontSize: 14, fontWeight: '700', color: colors.text },
   score: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   scoreActive: { color: colors.accent },
+  cie: {
+    marginHorizontal: 12,
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 5,
+    backgroundColor: colors.header,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.accent,
+  },
+  cieHeadline: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textOnGreen,
+    lineHeight: 16,
+    marginBottom: 6,
+  },
+  cieLeanRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 4,
+  },
+  cieLean: { fontSize: 11, fontWeight: '800', color: colors.textOnGreen },
+  ciePressure: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  cieTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+  },
+  cieFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: colors.accent,
+  },
   oddsRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 12, paddingBottom: 8 },
   oddsChip: {
     flex: 1, flexDirection: 'row', justifyContent: 'space-between',

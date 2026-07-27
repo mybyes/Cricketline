@@ -14,6 +14,9 @@ import {
   splitSeriesByTiming,
 } from '@/lib/api'
 import { getAndroidAppUrl } from '@/lib/appLinks'
+import {
+  BRAND_DESCRIPTION, BRAND_KEYWORDS, BRAND_NAME, BRAND_OG_DESCRIPTION, BRAND_POSITIONING,
+} from '@/lib/brand'
 import { getSiteUrl } from '@/lib/site'
 
 export const revalidate = 15
@@ -32,26 +35,21 @@ function seriesWhen(start?: string, end?: string) {
 }
 
 export const metadata: Metadata = {
-  title: 'Cricket Pulse – Live Line & AI',
-  description:
-    'Cricket Pulse – Live Line & AI: real-time scores, display-only match odds & session markets, scorecards, squads and fixtures — IPL, Tests, ODIs & T20. Free, no login.',
-  keywords: [
-    'live cricket line', 'cricket live line', 'live line app',
-    'live cricket score', 'cricket scorecard', 'match odds', 'session markets',
-    'IPL live score', 'fastest live cricket score', 'cricket pulse',
-  ],
+  title: `${BRAND_NAME} — live cricket & smart insights`,
+  description: BRAND_DESCRIPTION,
+  keywords: [...BRAND_KEYWORDS],
   alternates: { canonical: getSiteUrl() },
   openGraph: {
-    title: 'Cricket Pulse – Live Line & AI',
-    description: 'Real-time cricket live line, display-only markets and scorecards — IPL, Tests, ODIs & T20.',
+    title: `${BRAND_NAME} — live cricket & smart insights`,
+    description: BRAND_OG_DESCRIPTION,
     url: getSiteUrl(),
     type: 'website',
-    images: [{ url: `${getSiteUrl()}/og.svg`, width: 1200, height: 630, alt: 'Cricket Pulse' }],
+    images: [{ url: `${getSiteUrl()}/og.svg`, width: 1200, height: 630, alt: BRAND_NAME }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Cricket Pulse – Live Line & AI',
-    description: 'Live scores, display-only markets & scorecards. Free, no login.',
+    title: `${BRAND_NAME} — live cricket & smart insights`,
+    description: BRAND_OG_DESCRIPTION,
     images: [`${getSiteUrl()}/og.svg`],
   },
 }
@@ -60,18 +58,18 @@ const playUrl = getAndroidAppUrl()
 const appJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'Cricket Pulse – Live Line & AI',
+  name: BRAND_NAME,
   applicationCategory: 'SportsApplication',
   operatingSystem: 'Android',
   ...(playUrl ? { url: playUrl, downloadUrl: playUrl } : { url: getSiteUrl() }),
-  description: 'Android cricket live line app — real-time scores, display-only markets, scorecards, squads and fixtures.',
+  description: `Android app for ${BRAND_POSITIONING}. Scorecards, squads and fixtures.`,
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
 }
 
 const orgJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Cricket Pulse',
+  name: BRAND_NAME,
   url: getSiteUrl(),
   logo: `${getSiteUrl()}/og.svg`,
   sameAs: ['https://x.com/ChaiPeCric'],
@@ -95,9 +93,9 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'WebSite',
-        name: 'Cricket Pulse',
+        name: BRAND_NAME,
         url: getSiteUrl(),
-        description: 'Cricket Pulse – Live Line & AI: display-only markets and scorecards for IPL, Tests, ODIs and T20.',
+        description: BRAND_DESCRIPTION,
         potentialAction: {
           '@type': 'SearchAction',
           target: { '@type': 'EntryPoint', urlTemplate: `${getSiteUrl()}/search?q={search_term_string}` },
@@ -108,7 +106,7 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
       <PageRefresher intervalMs={15_000} />
       <SiteHeader />
-      <h1 className="sr-only">Cricket Pulse – Live Line &amp; AI — IPL, Tests, ODIs &amp; T20</h1>
+      <h1 className="sr-only">{BRAND_NAME} — {BRAND_POSITIONING} — IPL, Tests, ODIs &amp; T20</h1>
 
       <div className="container page-layout">
         <main className="main-col">

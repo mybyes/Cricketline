@@ -3,7 +3,7 @@ import { PortalLayout } from '@/components/PortalLayout'
 
 export const metadata: Metadata = {
   title: 'Terms of Use',
-  description: 'Terms of use for Cricket Pulse – Live Line & AI. Display-only information service.',
+  description: 'Terms of use for Cricket Pulse — live cricket scores and smart insights.',
   alternates: { canonical: '/terms' },
 }
 
@@ -14,14 +14,14 @@ export default function TermsPage() {
         <p><strong>Last updated:</strong> 26 July 2026</p>
         <h2>Service</h2>
         <p>
-          Cricket Pulse provides cricket scores, commentary-style ball history, tables, and display-only
-          market rates for information. The service is provided “as is” and may be delayed, incomplete, or
+          Cricket Pulse provides cricket scores, commentary-style ball history, tables, and match rates
+          for information. The service is provided “as is” and may be delayed, incomplete, or
           unavailable.
         </p>
         <h2>No betting</h2>
         <p>
-          Cricket Pulse is not a betting or gambling operator. Rates shown are for display only. You must
-          not use the app or site to place stakes with us — we do not accept wagers.
+          Cricket Pulse is not a betting or gambling operator. We do not accept wagers or process
+          betting payments.
         </p>
         <h2>Accuracy</h2>
         <p>

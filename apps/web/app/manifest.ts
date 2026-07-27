@@ -1,11 +1,12 @@
 import type { MetadataRoute } from 'next'
+import { BRAND_DESCRIPTION, BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
 
 /** Site manifest for icons / theme — product app is Android (Play Store). */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Cricket Pulse – Live Line & AI',
-    short_name: 'Cricket Pulse',
-    description: 'Live Line & AI — scores, display-only markets, scorecards and fixtures.',
+    name: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+    short_name: BRAND_NAME,
+    description: BRAND_DESCRIPTION,
     start_url: '/',
     display: 'standalone',
     background_color: '#F2EFE6',

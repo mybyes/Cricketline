@@ -2,7 +2,7 @@
   "matchId": "example-match-id",
   "source": "feed",
   "displayOnly": true,
-  "disclaimer": "Display-only market rates for information. Not a betting service — no wagers accepted.",
+  "disclaimer": "",
   "suspended": false,
   "updatedAt": 1710000000000,
   "matchOdds": [

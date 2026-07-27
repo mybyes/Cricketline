@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { Match } from '@/lib/api'
+import type { MatchIntelligenceCard } from '@/lib/intelligence'
 import type { MatchOddsBoard } from '@/lib/odds'
 import { getPublicApiUrl } from '@/lib/apiUrl'
 import { staleNotice } from '@/lib/cacheTime'
@@ -10,6 +11,12 @@ import { loadHomeCache, mergeMatchList, saveHomeCache } from '@/lib/matchCache'
 import { isLiveMatch } from '@/lib/matchState'
 import { usePolling } from '@/lib/usePolling'
 import { TeamBadge } from './TeamBadge'
+
+function shortLeader(name: string) {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 4).toUpperCase()
+  return parts.map((p) => p[0]).join('').slice(0, 4).toUpperCase()
+}
 
 const API = getPublicApiUrl()
 
@@ -43,8 +50,14 @@ function shortOf(match: Match, i: number) {
     ?? '?'
 }
 
-/** Slim chalk card — shortnames + score + one status line. */
-function WebMatchCard({ match, odds }: { match: Match; odds?: MatchOddsBoard | null }) {
+/** Slim chalk card — score + CIE lean/story (live) + optional rates. */
+function WebMatchCard({
+  match, odds, intel,
+}: {
+  match: Match
+  odds?: MatchOddsBoard | null
+  intel?: MatchIntelligenceCard | null
+}) {
   const live = match.matchStarted && !match.matchEnded
   const fmt = (match.matchType ?? 'match').toUpperCase()
   const scores = match.score ?? []
@@ -54,6 +67,8 @@ function WebMatchCard({ match, odds }: { match: Match; odds?: MatchOddsBoard | n
   const s1 = scores.find((s) => s.inning.toLowerCase().includes(t1))
   const series = match.name.split(',').pop()?.trim()
   const state = live ? 'LIVE' : match.matchEnded ? 'RESULT' : 'UP'
+  const win = intel?.winProbability
+  const leanPct = win ? Math.max(win.battingPct, win.bowlingPct) : null
 
   return (
     <Link href={`/match/${match.id}`} className={`w-match ${live ? 'w-match-live' : ''}`}>
@@ -89,6 +104,27 @@ function WebMatchCard({ match, odds }: { match: Match; odds?: MatchOddsBoard | n
           <TeamBadge shortname={shortOf(match, 1)} name={match.teams[1]} img={match.teamInfo?.[1]?.img} size={28} />
         </div>
       </div>
+
+      {live && intel?.headline ? (
+        <div className="w-cie">
+          <p className="w-cie-headline" title={intel.headline}>{intel.headline}</p>
+          {win && leanPct != null ? (
+            <div className="w-cie-lean">
+              <div className="w-cie-lean-row">
+                <span title="Win lean from current match state — estimate, not a prediction">
+                  {shortLeader(win.leader)} {leanPct}% <em className="w-cie-est">lean</em>
+                </span>
+                <span className={`w-cie-p w-cie-p-${intel.pressureLevel.toLowerCase()}`}>
+                  {intel.pressureLevel}
+                </span>
+              </div>
+              <div className="w-cie-track" aria-hidden>
+                <div className="w-cie-fill" style={{ width: `${win.battingPct}%` }} />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {live && odds?.matchOdds?.length ? (
         <div className="w-odds">
@@ -132,6 +168,7 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
   upcomingRef.current = upcoming
   const [stale, setStale] = useState(initial?.stale ?? !!boot.diskAt)
   const [oddsById, setOddsById] = useState<Record<string, MatchOddsBoard>>({})
+  const [intelById, setIntelById] = useState<Record<string, MatchIntelligenceCard>>({})
   const [cachedLabel, setCachedLabel] = useState<string | null>(
     (initial?.stale || boot.diskAt) && (initial?.cachedAt ?? boot.diskAt)
       ? staleNotice(initial?.cachedAt ?? boot.diskAt)
@@ -139,11 +176,12 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
   )
 
   const load = useCallback(async () => {
-    const [l, r, u, oRes] = await Promise.all([
+    const [l, r, u, oRes, iRes] = await Promise.all([
       fetchMatches('/matches/live'),
       fetchMatches('/matches/recent'),
       fetchMatches('/matches/upcoming'),
       fetch(`${API}/odds/live`, { cache: 'no-store' }).then((res) => res.json()).catch(() => null),
+      fetch(`${API}/intelligence/live`, { cache: 'no-store' }).then((res) => res.json()).catch(() => null),
     ])
     const disk = loadHomeCache()
     const nextLive = mergeMatchList(l.data, liveRef.current.length ? liveRef.current : (disk?.live ?? []))
@@ -156,6 +194,11 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
       const map: Record<string, MatchOddsBoard> = {}
       for (const board of oRes.data as MatchOddsBoard[]) map[board.matchId] = board
       setOddsById(map)
+    }
+    if (iRes?.success && Array.isArray(iRes.data)) {
+      const map: Record<string, MatchIntelligenceCard> = {}
+      for (const card of iRes.data as MatchIntelligenceCard[]) map[card.matchId] = card
+      setIntelById(map)
     }
     if (nextLive.length || nextRecent.length || nextUpcoming.length) {
       saveHomeCache(nextLive, nextRecent, nextUpcoming)
@@ -265,7 +308,7 @@ export function LiveScoresPanel({ initial }: { initial?: LiveScoresInitial }) {
         <div className="match-rail" role="list">
           {list.map((m) => (
             <div key={m.id} className="match-rail-item" role="listitem">
-              <WebMatchCard match={m} odds={oddsById[m.id]} />
+              <WebMatchCard match={m} odds={oddsById[m.id]} intel={intelById[m.id]} />
             </div>
           ))}
         </div>

@@ -131,3 +131,14 @@ export interface MatchIntelligence {
   turningPoints: TurningPoint[]
   narrative: NarrativeResult
 }
+
+/** Slim payload for home Live rails — narrative + lean only. */
+export interface MatchIntelligenceCard {
+  matchId: string
+  fingerprint: string
+  updatedAt: number
+  headline: string
+  winProbability: { battingPct: number; bowlingPct: number; leader: string } | null
+  pressureLevel: PressureLevel
+  momentumDirection: MomentumResult['direction']
+}

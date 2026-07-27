@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
 import { AdSlot } from '@/components/AdSlot'
-import { ChaseStrip } from '@/components/ChaseStrip'
+import { ChaseStrip, getChaseLine } from '@/components/ChaseStrip'
 import { MatchTabs, type MatchTab } from '@/components/MatchTabs'
 import { PageRefresher } from '@/components/PageRefresher'
 import { Scorecard } from '@/components/Scorecard'
@@ -10,6 +10,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { Squads } from '@/components/Squads'
 import { InsightsStrip } from '@/components/InsightsStrip'
 import { LastBallBanner } from '@/components/LastBallBanner'
+import { LivePairStrip } from '@/components/LivePairStrip'
 import { MatchHistory } from '@/components/MatchHistory'
 import { OddsPanel } from '@/components/OddsPanel'
 import {
@@ -17,6 +18,7 @@ import {
   type BbbBall, type MatchOddsBoard, type ScorecardData, type SquadTeam,
 } from '@/lib/api'
 import type { MatchIntelligence } from '@/lib/intelligence'
+import { matchRunRates } from '@/lib/liveContext'
 import { synthRatesBoard } from '@/lib/matchRates'
 import { getSiteUrl } from '@/lib/site'
 import { teamColor } from '@/lib/teamColors'
@@ -62,7 +64,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const scoreStr = data.score?.map((s) => `${s.r}/${s.w}`).join(' · ') ?? ''
   const live = data.matchStarted && !data.matchEnded
   const title = `${teams} — Live Line, History & Scorecard`
-  const description = `${data.status}${scoreStr ? `. ${scoreStr}` : ''}. Live line with display-only odds, match history, scorecard and squads. ${data.venue}.`
+  const description = `${data.status}${scoreStr ? `. ${scoreStr}` : ''}. Live score, match insights, scorecard and squads. ${data.venue}.`
   const url = `${site}/match/${id}`
   const ogTitle = live ? `${teams} Live Line & Score` : `${teams} Scorecard & Result`
   return {
@@ -100,8 +102,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const hasScorecard = innings.some((i) => i.batting?.length)
   const c0 = teamColor(data.teamInfo?.[0]?.shortname, data.teams[0])
   const c1 = teamColor(data.teamInfo?.[1]?.shortname, data.teams[1])
-  const chipColor = (inning: string) =>
-    inning.toLowerCase().includes((data.teams[0] ?? '').toLowerCase().split(' ')[0]) ? c0 : c1
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -124,25 +124,43 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     organizer: { '@type': 'Organization', name: 'Cricket Pulse', url: site },
   }
 
+  const short0 = data.teamInfo?.[0]?.shortname
+    ?? data.teams[0]?.split(' ').map((w) => w[0]).join('').slice(0, 3)
+    ?? 'T1'
+  const short1 = data.teamInfo?.[1]?.shortname
+    ?? data.teams[1]?.split(' ').map((w) => w[0]).join('').slice(0, 3)
+    ?? 'T2'
   const batShort = data.teamInfo?.[data.score && data.score.length > 1 ? 1 : 0]?.shortname
     ?? data.teams[data.score && data.score.length > 1 ? 1 : 0]?.split(' ').map((w) => w[0]).join('').slice(0, 3)
     ?? 'BAT'
   const active = data.score?.[data.score.length - 1]
   const ballsFaced = bbb.length || (active ? Math.floor(active.o) * 6 + Math.round((active.o % 1) * 10) : 0)
   const scoreLine = active ? `${batShort} ${active.r}-${active.w} (${ballsFaced} b)` : undefined
+  const scoreFor = (team: string, short: string) =>
+    data.score?.find((s) => {
+      const inn = s.inning.toLowerCase()
+      return inn.includes(team.toLowerCase().split(' ')[0] ?? '')
+        || inn.includes(short.toLowerCase())
+    })
+  const s0 = scoreFor(data.teams[0] ?? '', short0)
+  const s1 = scoreFor(data.teams[1] ?? '', short1)
 
-  // Insight-first Live: last ball → insights → chase → display rates (secondary).
+  const { crr, rrr } = matchRunRates(data)
+  const chase = live ? getChaseLine(data) : null
+
+  // Live: last ball → rates/session → match story → batters/bowler.
+  // Target/chase lives in the top scoreboard.
   const liveContent = (
     <div className="m-live">
-      {live && bbb.length > 0 ? <LastBallBanner bbb={bbb} scoreLine={scoreLine} /> : null}
-      {live ? <InsightsStrip intel={intel} /> : null}
-      {hasScorecard ? <ChaseStrip data={data} /> : (
+      {live && bbb.length > 0 ? <LastBallBanner bbb={bbb} /> : null}
+      {!hasScorecard ? (
         <div className="empty-state"><p className="empty-title">{data.status}</p><p className="empty-sub">Live line updates when play begins.</p></div>
-      )}
+      ) : null}
       <div className="m-live-rates">
-        <p className="m-live-rates-label">Display rates</p>
         <OddsPanel matchId={id} initial={odds} />
       </div>
+      {live ? <InsightsStrip intel={intel} /> : null}
+      {live ? <LivePairStrip data={data} bbb={bbb} /> : null}
       <AdSlot id={`match-${id}-live`} format="rectangle" />
     </div>
   )
@@ -206,20 +224,45 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             {live ? <span className="badge-live">● LIVE</span> : data.matchEnded ? <span className="badge-status">RESULT</span> : <span className="badge-status">UPCOMING</span>}
             {series && <span className="match-hero-series">{series}</span>}
           </div>
-          <h1>
-            <span className="hero-team"><span className="hero-team-dot" style={{ background: c0 }} />{data.teams[0]}</span>
+          <h1 className="sr-only">{data.teams[0]} vs {data.teams[1]}</h1>
+          <div className="hero-board" aria-label="Scoreboard">
+            <div className="hero-side">
+              <span className="hero-abbr">
+                <span className="hero-team-dot" style={{ background: c0 }} />
+                {short0}
+              </span>
+              <span className="hero-runs">{s0 ? <>{s0.r}/{s0.w}</> : '—'}</span>
+              <span className="hero-overs">{s0 ? `${s0.o} ov` : ''}</span>
+            </div>
             <span className="hero-vs">vs</span>
-            <span className="hero-team"><span className="hero-team-dot" style={{ background: c1 }} />{data.teams[1]}</span>
-          </h1>
-          <div className="match-hero-scores">
-            {data.score?.map((s, i) => (
-              <div key={i} className="hero-score-chip" style={{ borderLeft: `3px solid ${chipColor(s.inning)}` }}>
-                <span className="hero-inn">{s.inning.replace(/ inning.*$/i, '')}</span>
-                <span className="hero-runs">{s.r}/{s.w} <small>({s.o})</small></span>
+            <div className="hero-side hero-side-b">
+              <span className="hero-abbr">
+                <span className="hero-team-dot" style={{ background: c1 }} />
+                {short1}
+              </span>
+              <span className="hero-runs">{s1 ? <>{s1.r}/{s1.w}</> : '—'}</span>
+              <span className="hero-overs">{s1 ? `${s1.o} ov` : ''}</span>
+            </div>
+            {live && (crr != null || rrr != null) ? (
+              <div className="hero-rates" aria-label="Run rates">
+                {crr != null ? (
+                  <div className="hero-rate">
+                    <span className="hero-rate-label">CRR</span>
+                    <span className="hero-rate-val">{crr.toFixed(2)}</span>
+                  </div>
+                ) : null}
+                {rrr != null ? (
+                  <div className="hero-rate">
+                    <span className="hero-rate-label">RRR</span>
+                    <span className="hero-rate-val">{rrr.toFixed(2)}</span>
+                  </div>
+                ) : null}
               </div>
-            ))}
+            ) : null}
           </div>
-          <p className="match-hero-status">{data.status}</p>
+          {chase ? <ChaseStrip data={data} /> : (
+            <p className="match-hero-status">{data.status}</p>
+          )}
           <p className="match-meta">{data.venue} · {data.date}</p>
         </div>
 

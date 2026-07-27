@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { validateIdParam } from '../lib/validateId'
-import { getMatchIntelligence } from '../cie/service'
+import { getLiveIntelligenceCards, getMatchIntelligence } from '../cie/service'
 
 export default async function intelligenceRoute(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>(
@@ -19,4 +19,15 @@ export default async function intelligenceRoute(app: FastifyInstance) {
       }
     },
   )
+
+  /** Slim CIE cards for home Live rails. */
+  app.get('/intelligence/live', async (req, reply) => {
+    try {
+      const cards = await getLiveIntelligenceCards(app.redis)
+      return { success: true, data: cards }
+    } catch (e) {
+      req.log.warn({ err: e }, 'live intelligence error')
+      return reply.status(503).send({ success: false, error: 'Live intelligence temporarily unavailable' })
+    }
+  })
 }

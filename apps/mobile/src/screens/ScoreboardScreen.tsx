@@ -27,7 +27,9 @@ import type { BbbBall } from '../types/extras'
 import type { Match, RootStackParamList } from '../types/match'
 import type { InningScorecard, ScorecardData } from '../types/scorecard'
 import { colors } from '../theme/colors'
-import { formatScore, formatSr } from '../theme/matchUtils'
+import { getChaseLine } from '../lib/chase'
+import { matchRunRates } from '../lib/liveContext'
+import { formatSr } from '../theme/matchUtils'
 
 type Route = RouteProp<RootStackParamList, 'Scoreboard'>
 type Tab = 'line' | 'history' | 'scorecard' | 'squad' | 'points' | 'info'
@@ -161,21 +163,61 @@ function BowlingTable({ inning }: { inning: InningScorecard }) {
 
 function ScoreHero({ data }: { data: ScorecardData }) {
   const t0 = data.teams[0]; const t1 = data.teams[1]
+  const short0 = data.teamInfo?.[0]?.shortname ?? t0
+  const short1 = data.teamInfo?.[1]?.shortname ?? t1
   const s0 = data.score?.find((s) => s.inning.toLowerCase().includes(t0?.toLowerCase().split(' ')[0] ?? ''))
   const s1 = data.score?.find((s) => s.inning.toLowerCase().includes(t1?.toLowerCase().split(' ')[0] ?? ''))
+  const live = data.matchStarted && !data.matchEnded
+  const { crr, rrr } = matchRunRates(data)
+  const chase = live ? getChaseLine(data) : null
   return (
-    <View style={styles.hero}>
-      <View style={styles.heroTeam}>
-        <TeamAvatar shortname={data.teamInfo?.[0]?.shortname ?? t0} name={t0} logo={data.teamInfo?.[0]?.img} size={36} />
-        <Text style={styles.heroTeamName}>{data.teamInfo?.[0]?.shortname ?? t0}</Text>
-        <Text style={styles.heroScore}>{s0 ? formatScore(s0) : '—'}</Text>
+    <View style={styles.heroWrap}>
+      <View style={styles.hero}>
+        <View style={styles.heroTeam}>
+          <View style={styles.heroAbbrRow}>
+            <TeamAvatar shortname={short0} name={t0} logo={data.teamInfo?.[0]?.img} size={22} />
+            <Text style={styles.heroTeamName}>{short0}</Text>
+          </View>
+          <Text style={styles.heroScore}>{s0 ? `${s0.r}/${s0.w}` : '—'}</Text>
+          <Text style={styles.heroOvers}>{s0 ? `${s0.o} ov` : ' '}</Text>
+        </View>
+        <View style={styles.heroMid}>
+          <Text style={styles.heroVs}>vs</Text>
+          {live && (crr != null || rrr != null) ? (
+            <View style={styles.heroRates}>
+              {crr != null ? (
+                <View style={styles.heroRate}>
+                  <Text style={styles.heroRateLabel}>CRR</Text>
+                  <Text style={styles.heroRateVal}>{crr.toFixed(2)}</Text>
+                </View>
+              ) : null}
+              {rrr != null ? (
+                <View style={styles.heroRate}>
+                  <Text style={styles.heroRateLabel}>RRR</Text>
+                  <Text style={styles.heroRateVal}>{rrr.toFixed(2)}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+        <View style={[styles.heroTeam, { alignItems: 'flex-end' }]}>
+          <View style={styles.heroAbbrRow}>
+            <Text style={styles.heroTeamName}>{short1}</Text>
+            <TeamAvatar shortname={short1} name={t1} logo={data.teamInfo?.[1]?.img} size={22} />
+          </View>
+          <Text style={styles.heroScore}>{s1 ? `${s1.r}/${s1.w}` : '—'}</Text>
+          <Text style={styles.heroOvers}>{s1 ? `${s1.o} ov` : ' '}</Text>
+        </View>
       </View>
-      <Text style={styles.heroVs}>v</Text>
-      <View style={[styles.heroTeam, { alignItems: 'flex-end' }]}>
-        <TeamAvatar shortname={data.teamInfo?.[1]?.shortname ?? t1} name={t1} logo={data.teamInfo?.[1]?.img} size={36} />
-        <Text style={styles.heroTeamName}>{data.teamInfo?.[1]?.shortname ?? t1}</Text>
-        <Text style={styles.heroScore}>{s1 ? formatScore(s1) : '—'}</Text>
-      </View>
+      {chase ? (
+        <View style={styles.heroTarget}>
+          <Text style={styles.heroTargetPill}>Target {chase.target}</Text>
+          <Text style={styles.heroTargetTxt}>
+            need {chase.need} from {chase.ballsLeft} balls
+            {chase.rrr > 0 ? ` · RRR ${chase.rrr.toFixed(2)}` : ''}
+          </Text>
+        </View>
+      ) : null}
     </View>
   )
 }
@@ -538,11 +580,47 @@ const styles = StyleSheet.create({
   backBtn: { paddingVertical: 4, minHeight: 44, justifyContent: 'center' },
   backText: { fontSize: 16, color: '#fff', fontWeight: '600' },
   matchTitle: { fontSize: 17, fontWeight: '800', color: '#fff', paddingHorizontal: 16, paddingBottom: 12 },
-  hero: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  heroTeam: { flex: 1, alignItems: 'flex-start', gap: 4 },
-  heroTeamName: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
-  heroScore: { fontSize: 32, fontWeight: '900', color: colors.score },
-  heroVs: { fontSize: 14, color: colors.textDim, fontWeight: '600', marginHorizontal: 12 },
+  heroWrap: {
+    backgroundColor: colors.card,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  hero: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: 10,
+  },
+  heroTarget: {
+    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8,
+    marginHorizontal: 12, marginBottom: 10,
+    paddingHorizontal: 10, paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(240,162,2,0.12)',
+    borderWidth: 1, borderColor: 'rgba(240,162,2,0.28)',
+  },
+  heroTargetPill: {
+    fontSize: 10, fontWeight: '800', letterSpacing: 0.5,
+    textTransform: 'uppercase', color: colors.header,
+    backgroundColor: colors.accent, paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 999, overflow: 'hidden',
+  },
+  heroTargetTxt: {
+    flex: 1, fontSize: 12, fontWeight: '700', color: colors.score, minWidth: 140,
+  },
+  heroTeam: { flex: 1, alignItems: 'flex-start', gap: 1, minWidth: 0 },
+  heroAbbrRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  heroTeamName: {
+    fontSize: 11, fontWeight: '800', color: colors.textMuted,
+    letterSpacing: 0.4, textTransform: 'uppercase',
+  },
+  heroScore: { fontSize: 22, fontWeight: '800', color: colors.score, fontVariant: ['tabular-nums'], letterSpacing: -0.3 },
+  heroOvers: { fontSize: 11, fontWeight: '600', color: colors.textDim, fontVariant: ['tabular-nums'] },
+  heroMid: { alignItems: 'center', gap: 4, marginHorizontal: 6 },
+  heroVs: { fontSize: 10, color: colors.textDim, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  heroRates: { flexDirection: 'row', gap: 4 },
+  heroRate: {
+    backgroundColor: colors.header, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 3, alignItems: 'center', minWidth: 40,
+  },
+  heroRateLabel: { fontSize: 8, fontWeight: '800', letterSpacing: 0.6, color: colors.accent },
+  heroRateVal: { fontSize: 11, fontWeight: '800', color: colors.textOnGreen, fontVariant: ['tabular-nums'] },
   tabBarWrap: { position: 'relative', backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
   tabBar: { backgroundColor: colors.card },
   tabBarContent: { paddingRight: 28 },

@@ -23,7 +23,7 @@ export function InsightsStrip({ intel }: { intel: MatchIntelligence | null }) {
 
   return (
     <View style={styles.wrap} accessibilityLabel="Match insights">
-      <Text style={styles.kicker}>INSIGHTS</Text>
+      <Text style={styles.kicker}>MATCH STORY</Text>
       <Text style={styles.headline}>{intel.narrative.headline}</Text>
       <Text style={styles.summary}>{intel.narrative.summary}</Text>
 
@@ -33,7 +33,7 @@ export function InsightsStrip({ intel }: { intel: MatchIntelligence | null }) {
             <Text style={styles.winLeader}>
               {shortTeam(win.leader)} {Math.max(win.battingPct, win.bowlingPct)}%
             </Text>
-            <Text style={styles.winSub}>winning lean</Text>
+            <Text style={styles.winSub}>win lean · estimate</Text>
           </View>
           <View style={styles.winTrack}>
             <View style={[styles.winFill, { width: `${batPct}%` }]} />
@@ -42,6 +42,9 @@ export function InsightsStrip({ intel }: { intel: MatchIntelligence | null }) {
             <Text style={styles.winEnd}>Bat {win.battingPct}%</Text>
             <Text style={styles.winEnd}>Bowl {win.bowlingPct}%</Text>
           </View>
+          <Text style={styles.estimateNote}>
+            Estimate from match state — not a prediction
+          </Text>
         </View>
       ) : null}
 
@@ -93,6 +96,7 @@ function pressureColor(level: string) {
 
 const styles = StyleSheet.create({
   wrap: {
+    marginTop: 2,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: 'rgba(22, 53, 40, 0.28)',
@@ -160,6 +164,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: 'rgba(247,244,236,0.6)',
+  },
+  estimateNote: {
+    marginTop: 6,
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(247,244,236,0.62)',
+    lineHeight: 15,
   },
   metrics: {
     flexDirection: 'row',
