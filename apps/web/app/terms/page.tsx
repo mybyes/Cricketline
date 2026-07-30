@@ -33,10 +33,9 @@ export default function TermsPage() {
           Do not scrape, overload, or abuse the API or site. Do not misrepresent Cricket Pulse as an
           official league product or as a bookmaker.
         </p>
-        <h2>Changes</h2>
+        <h2>Contact</h2>
         <p>
-          We may update these terms as the product evolves. Continued use after changes means you accept
-          the updated terms.
+          Questions about these terms: <a href="mailto:admin@perqora.in">admin@perqora.in</a>.
         </p>
       </article>
     </PortalLayout>

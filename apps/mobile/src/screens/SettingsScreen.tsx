@@ -14,7 +14,9 @@ import { colors } from '../theme/colors'
 type Nav = NativeStackNavigationProp<RootStackParamList>
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0'
+/** Hosted privacy/terms base. Override with EXPO_PUBLIC_SITE_URL when you publish docs/privacy.html. */
 const SITE = (process.env.EXPO_PUBLIC_SITE_URL ?? 'https://cricketline-mybyes.vercel.app').replace(/\/$/, '')
+const PRIVACY_EMAIL = 'admin@perqora.in'
 
 function Row({
   label, onPress, last,
@@ -106,7 +108,12 @@ export function SettingsScreen() {
           <Row label="About Cricket Pulse" onPress={() => open('/about')} />
           <Row label="How insights work" onPress={() => open('/methodology')} />
           <Row label="Privacy policy" onPress={() => open('/privacy')} />
-          <Row label="Terms of use" onPress={() => open('/terms')} last />
+          <Row label="Terms of use" onPress={() => open('/terms')} />
+          <Row
+            label="Contact · admin@perqora.in"
+            onPress={() => { void Linking.openURL(`mailto:${PRIVACY_EMAIL}`) }}
+            last
+          />
         </Section>
 
         <Text style={styles.version}>

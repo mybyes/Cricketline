@@ -34,8 +34,8 @@ export default function PrivacyPage() {
         </p>
         <h2>Contact</h2>
         <p>
-          For privacy requests related to Cricket Pulse, contact the operator via the project maintainers
-          or the social channel listed on the site.
+          For privacy requests related to Cricket Pulse, email{' '}
+          <a href="mailto:admin@perqora.in">admin@perqora.in</a>.
         </p>
       </article>
     </PortalLayout>

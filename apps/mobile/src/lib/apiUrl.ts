@@ -1,4 +1,4 @@
-export const PRODUCTION_API_URL = 'https://backend-production-233f.up.railway.app'
+export const PRODUCTION_API_URL = 'https://cricketline.onrender.com'
 
 export function getApiUrl(): string {
   if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL
